@@ -1,13 +1,22 @@
+import numpy as np
 from mesa import Model, Agent
 from mesa.space import MultiGrid
 
 
 class Forest(Model):
-    def __init__(self, width, height):
+    def __init__(self, width, height, max_substrate=3, max_soil_fertility=3):
         self.height = width
         self.width = height
         
         self.grid = MultiGrid(self.width, self.height, torus=True)
+
+        # Add initial substrate
+        substrate = np.random.randint(max_substrate)
+        self.grid.add_property_layer('substrate', self.width, self.height, substrate)
+
+        # Add initial soil fertility
+        soil_fertility = np.random.randint(max_soil_fertility)
+        self.grid.add_property_layer('soil_fertility', self.width, self.height, soil_fertility)
         
         self.n_agents = 0
         self.agents = []
@@ -41,7 +50,7 @@ class Forest(Model):
         # Remove agent from model
         self.agents.remove(agent)
     
-    
+
     def step(self):
         '''
         Method that steps every agent. 
