@@ -45,11 +45,27 @@ class Forest(Model):
         Method that initializes the population of trees and fungi.
         """
 
-        for i in range(n_agents):
-            x = random.randrange(self.width)
-            y = random.randrange(self.height)
+        # Get lattice coordinates
+        coords = np.indices((self.width, self.height)).reshape(2, -1).T
+
+        # Determine whether multiple agents can be placed on same site
+        if agent_type == Tree:
+            replace = False
+        else:
+            replace = True
+        
+        # Random coords sample
+        coords_select = coords[np.random.choice(len(coords), n_agents, replace=replace)]
+
+        # Add agents to the grid
+        for coord in coords_select:
+            self.new_agent(agent_type, coord)
+
+        # for i in range(n_agents):
+        #     x = random.randrange(self.width)
+        #     y = random.randrange(self.height)
             
-            self.new_agent(agent_type, (x, y))
+        #     self.new_agent(agent_type, (x, y))
 
     
     def new_agent(self, agent_type, pos):
