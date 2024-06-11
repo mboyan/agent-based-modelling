@@ -1,79 +1,5 @@
 import numpy as np
-from mesa import Model, Agent
-from mesa.space import MultiGrid
-
-
-class Forest(Model):
-    def __init__(self, width, height, n_init_trees, n_init_fungi, max_substrate=3, max_soil_fertility=3):
-        self.height = width
-        self.width = height
-        
-        self.grid = MultiGrid(self.width, self.height, torus=True)
-
-        # Add initial substrate
-        substrate = np.random.randint(max_substrate)
-        self.grid.add_property_layer('substrate', self.width, self.height, substrate)
-
-        # Add initial soil fertility
-        soil_fertility = np.random.randint(max_soil_fertility)
-        self.grid.add_property_layer('soil_fertility', self.width, self.height, soil_fertility)
-        
-        self.n_agents = n_init_trees + n_init_fungi
-        self.agents = []
-
-
-    def init_population(self, n_agents, type):
-        """
-        Method that initializes the population of trees and fungi.
-        """
-        for i in range(n_agents):
-            x = self.random.randrange(self.width)
-            y = self.random.randrange(self.height)
-            
-            if type == 'tree':
-                self.new_agent(Tree, (x, y))
-            elif type == 'fungus':
-                self.new_agent(Fungus, (x, y))
-
-    
-    def new_agent(self, agent_type, pos):
-        """
-        Method that enables us to add agents of a given type.
-        """
-        self.n_agents += 1
-        
-        # Create a new agent of the given type
-        new_agent = agent_type(self.n_agents, self, pos)
-        
-        # Place the agent on the grid
-        self.grid.place_agent(new_agent, pos)
-        
-        # And add the agent to the model so we can track it
-        self.agents.append(new_agent)
-    
-
-    def remove_agent(self, agent):
-        """
-        Method that enables us to remove passed agents.
-        """
-        self.n_agents -= 1
-        
-        # Remove agent from grid
-        self.grid.remove_agent(agent)
-        
-        # Remove agent from model
-        self.agents.remove(agent)
-    
-
-    def step(self):
-        """
-        Method that steps every agent. 
-        
-        Prevents applying step on new agents by creating a local list.
-        """
-        for agent in list(self.agents):
-            agent.step()
-
+from mesa import Agent
 
 class Organism(Agent):
     """
@@ -91,7 +17,7 @@ class Tree(Organism):
     A tree agent.
     """
 
-    def __init__(self, unique_id, model, pos, start_volume):
+    def __init__(self, unique_id, model, pos, start_volume=1):
         super().__init__(unique_id, model, pos)
 
         self.volume = start_volume
@@ -105,7 +31,7 @@ class Tree(Organism):
         """
 
         # Growth rate proportional to soil fertility
-        growth_rate = self.model.grid.get_property('soil_fertility', self.pos[0], self.pos[1]) * 0.1
+        growth_rate = self.model.grid.properties['soil_fertility'][self.pos[0]][self.pos[1]] * 0.1
 
         self.volume += growth_rate
 
@@ -117,7 +43,7 @@ class Tree(Organism):
         # Scan all substrate on lattice
         for x in range(self.model.width):
             for y in range(self.model.height):
-                if self.model.grid.get_property('substrate', x, y) > 0:
+                if self.model.grid.properties['substrate'][x][y] > 0:
                     
                     dist = np.sqrt((x - self.pos[0])**2 + (y - self.pos[1])**2)
 
@@ -195,3 +121,12 @@ class Fungus(Organism):
         """
         if self.energy <= 0:
             self.model.remove_agent(self)
+    
+
+    def step(self):
+        """
+        Fungus development step.
+        """
+        self.consume()
+        self.reproduce()
+        self.die()
