@@ -31,7 +31,7 @@ class Tree(Organism):
         """
 
         # Growth rate proportional to soil fertility
-        growth_rate = self.model.grid.properties['soil_fertility'][self.pos[0]][self.pos[1]] * 0.1
+        growth_rate = self.model.grid.properties['soil_fertility'].data[self.pos[0], self.pos[1]] * 0.1
 
         self.volume += growth_rate
 
@@ -43,7 +43,7 @@ class Tree(Organism):
         # Scan all substrate on lattice
         for x in range(self.model.width):
             for y in range(self.model.height):
-                if self.model.grid.properties['substrate'][x][y] > 0:
+                if self.model.grid.properties['substrate'].data[x, y] > 0:
                     
                     dist = np.sqrt((x - self.pos[0])**2 + (y - self.pos[1])**2)
 
@@ -80,8 +80,8 @@ class Fungus(Organism):
         """
         x, y = self.pos
         
-        substrate = self.model.grid.get_property('substrate', x, y)
-        self.model.grid.set_property('substrate', x, y, substrate - 1)
+        substrate = self.model.grid.properties['substrate'].data[x, y]
+        self.model.grid.properties['substrate'].set_cell((x, y), substrate - 1)
 
         self.energy += 1
         self.dispersal_coeff = 1
@@ -98,7 +98,7 @@ class Fungus(Organism):
             # Scan all substrate on lattice
             for x in range(self.model.width):
                 for y in range(self.model.height):
-                    if self.model.grid.get_property('substrate', x, y) > 0:
+                    if self.model.grid.properties['substrate'].data[x, y] > 0:
                         
                         dist = np.sqrt((x - self.pos[0])**2 + (y - self.pos[1])**2)
 

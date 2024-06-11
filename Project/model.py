@@ -91,7 +91,7 @@ class Forest(Model):
         """
         Method that calls the step method for each of the trees, and then for each of the fungi.
         """
-        print(self.grid.properties['substrate'].get_value(0,0))
+        # print(self.grid.properties['substrate'].data[0,0])
         # for agent in list(self.agents):
         #     agent.step()
         self.schedule_Tree.step()
