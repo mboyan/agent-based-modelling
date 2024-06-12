@@ -1,3 +1,10 @@
 Project/__pycache__/
+
+#for anyone using mac
 .DS_Store
+
+#pipenv for sofia
 Pipfile
+
+#pyenv for shreya
+abm/ 
