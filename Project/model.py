@@ -6,6 +6,17 @@ from mesa.datacollection import DataCollector
 from mesa.time import RandomActivation
 from agent import Tree, Fungus, Organism
 
+"""
+TODO
+- implement global planting strategy (given a harvesting strategy)
+  pick 2 planting, fix harvesting
+    1. simply plant exactly where a tree cut down (remove -> plant (delay?))
+    2. ANR: probabilistic reproduction based on density/fertility (pollen dispersion)
+    3. top 3-5 fertile sites; plant tree there (human planting strategy)
+- 
+"""
+
+
 class Forest(Model):
     def __init__(self, width, height, n_init_trees, n_init_fungi, max_substrate=3, max_soil_fertility=3):
 

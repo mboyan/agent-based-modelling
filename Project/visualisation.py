@@ -4,6 +4,12 @@ import agent as agt
 
 from mesa.experimental import JupyterViz
 
+'''
+Analysis stuff
+- phase space plot
+- bifurcation analysis
+'''
+
 def agent_portrayal(agent):
     if agent.agent_type == "Fungus":
         size = 4

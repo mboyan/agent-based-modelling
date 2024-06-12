@@ -15,6 +15,12 @@ class Organism(Agent):
 class Tree(Organism):
     """
     A tree agent.
+    TODO
+    - leaffall constant?
+    - embed shed_leaves from agent.py + update to not scan entire lattice
+    - add/define tree growth + consume fertility (from entire Moore neighborhood (+?))
+    - define harvesting in die function
+    - different initialization volumes
     """
 
     def __init__(self, unique_id, model, pos, start_volume=1):
@@ -67,6 +73,10 @@ class Tree(Organism):
 class Fungus(Organism):
     """
     A fungus agent.
+    TODO
+    - define fertility: rates, quantities, units
+    - remove endophyticism check
+    - sporulate & spore_infect = reproduce in agent.py -> combine
     """
     
     def __init__(self, unique_id, model, pos):
@@ -80,12 +90,16 @@ class Fungus(Organism):
     def consume(self):
         """
         Consume substrate.
+        TODO:
+        - substrate cannot go below 0
+        - multiple fungi? account for simulateous eating
         """
         x, y = self.pos
         
         substrate = self.model.grid.properties['substrate'].data[x, y]
         self.model.grid.properties['substrate'].set_cell((x, y), substrate - 1)
 
+        
         self.energy += 1
         self.dispersal_coeff = 1
     
@@ -93,6 +107,8 @@ class Fungus(Organism):
     def reproduce(self):
         """
         Reproduce if enough energy.
+        TODO
+        - don't inoculate the same substrate twice
         """
         if self.energy > 4:
             # Sporulate
@@ -106,7 +122,7 @@ class Fungus(Organism):
                         dist = np.sqrt((x - self.pos[0])**2 + (y - self.pos[1])**2)
 
                         # Inoculate substrate
-                        if np.random.random() < np.exp(-dist/self.dispersal_coeff):
+                        if np.random.random() < np.exp(-dist/self.dispersal_coeff): # and dist > 0
                             self.model.new_agent(Fungus, (x, y))
                         
                         # Inoculate tree

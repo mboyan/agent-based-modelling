@@ -8,12 +8,21 @@ from mesa import Agent
 
 ##### trees ######
 class Tree (Agent):
+    '''
+    TODO
+    - leaffall constant?
+    - embed shed_leaves from agent.py + update to not scan entire lattice
+    - add/define tree growth + consume fertility (from entire Moore neighborhood (+?))
+    - define harvesting in die function
+    - different initialization volumes
+    '''
     def __init__(self, unique_id, model, 
             pos, 
             infection,
             leaffall, 
             disp, 
-            endoloss, 
+            endoloss,
+            start_volume=1 
             ):
         super().__init__(unique_id, model)
         self.pos = pos
@@ -21,9 +30,15 @@ class Tree (Agent):
         self.infection = infection ## has an endophyte infection?
         self.leaffall = leaffall ## how often do leaves drop? 1=every step, 2=every other, etc.
         self.endoloss = endoloss ## stochastic loss of endophyte infection
+        self.volume = start_volume
 
     def distancefrom(self, other):
-        from numpy import array
+        '''
+        Calculate distance between self and other agent
+        NOTES:
+        - also used to calculate distance from wood, but wood no longer agent
+        - still relevant for other methods? check, otherwise update
+        '''
         a = array(self.pos)
         b = array(other.pos)
         c = a-b
@@ -31,12 +46,20 @@ class Tree (Agent):
         return(d)
 
     def dropleaves(self):
+        '''
+        drop leaves and try to infect wood
+        NOTES:
+        - wood not agent
+        '''
         if self.infection == True:
             woods = self.model.getall(Wood)
             for ag in woods:
                 self.leaf_infect(ag)
 
     def leaf_infect(self, host):
+        '''
+        
+        '''
         if self.model.endophytism:
                 dist = self.distancefrom(host)
                 prob = exp(-(1/(self.D+0.00001))*dist) ## add a little to keep from dividing by zero
@@ -52,6 +75,10 @@ class Tree (Agent):
         else: pass 
 
     def die(self):
+        '''
+        NOTES:
+        - also implement harvesting based on surrounding trees
+        '''
         self.model.grid._remove_agent(self.pos, self)
         self.model.schedule.remove(self)
 
@@ -65,6 +92,12 @@ class Tree (Agent):
 ##### fungi ########
 
 class Fungus (Agent):
+    '''
+    TODO
+    - define fertility: rates, quantities, units
+    - remove endophyticism check
+    - sporulate & spore_infect = reproduce in agent.py -> combine
+    '''
     def __init__(self, 
                 unique_id, 
                 model, 
@@ -75,8 +108,8 @@ class Fungus (Agent):
                 ):
         super().__init__(unique_id, model)
         self.pos = pos 
-        self.endocomp = endocomp
-        self.D = disp
+        self.endocomp = endocomp # endophytis yes/no
+        self.D = disp 
         self.energy = energy 
 
     def distancefrom(self, other):
