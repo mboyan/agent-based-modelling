@@ -23,7 +23,7 @@ class Tree(Organism):
     - different initialization volumes
     """
 
-    def __init__(self, unique_id, model, pos, start_volume=1):
+    def __init__(self, unique_id, model, pos, base_growth_rate=1, start_volume=1):
         super().__init__(unique_id, model, pos)
 
         self.agent_type = 'Tree'
@@ -31,17 +31,34 @@ class Tree(Organism):
         self.volume = start_volume
         self.dispersal_coeff = 4
         self.infected = False
+        self.base_growth_rate = base_growth_rate
 
 
     def grow(self):
         """
         Grow the tree.
+        TODO:
+        - find correct way to represent root system / inlcusion of neighbour fertility
         """
 
-        # Growth rate proportional to soil fertility
-        growth_rate = self.model.grid.properties['soil_fertility'].data[self.pos[0], self.pos[1]] * 0.1
+        # Get fertility of current cell and its neighbours
+        fertility_center = self.model.grid.properties['soil_fertility'].data[self.pos[0], self.pos[1]]
+        neighbourhood = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
+        fertility_nbrs = [self.model.grid_properties['soil_fertility'].data[x, y] for x, y in neighbourhood]
+        fertility = 0.5 * fertility_center + 0.5 * np.mean(fertility_nbrs)
 
-        self.volume += growth_rate
+        # Get neighbours occupied by trees
+        nbrs_with_trees = [1 for agent in neighbourhood if isinstance(agent, Tree)]
+        nbrs_with_trees = sum(nbrs_with_trees)
+
+        # Get total volume of neighbour trees
+        volume_nbrs = [agent.volume for agent in neighbourhood if isinstance(agent, Tree)]
+        volume_nbrs = sum(volume_nbrs)
+
+        # Growth term (can inclue)
+        volume_add = self.base_growth_rate / self.volume + self.volume * fertility + self.volume / (volume_nbrs + 1e-6)
+
+        self.volume += volume_add
 
     
     def shed_leaves(self):
@@ -129,7 +146,13 @@ class Fungus(Organism):
                         for agent in self.model.grid.get_cell_list_contents([(x, y)]):
                             if isinstance(agent, Tree):
                                 if not agent.infected:
-                                    if np.random.random() < np.exp(-dist/self.dispersal_coeff):
+                                    
+                                    # Decay status
+                                    subs_site = self.model.grid.properties['substrate'].data[x, y]
+                                    fert_site = self.model.grid.properties['soil_fertility'].data[x, y]
+                                    decay = subs_site / (subs_site + fert_site) if subs_site + fert_site else 0
+
+                                    if np.random.random() < decay * np.exp(-dist/self.dispersal_coeff):
                                         agent.infected = True
                                         agent.volume -= 1
                                         break
@@ -146,6 +169,6 @@ class Fungus(Organism):
         """
         Fungus development step.
         """
-        self.consume()
         self.reproduce()
+        self.consume()
         self.die()

@@ -13,11 +13,23 @@ TODO
     1. simply plant exactly where a tree cut down (remove -> plant (delay?))
     2. ANR: probabilistic reproduction based on density/fertility (pollen dispersion)
     3. top 3-5 fertile sites; plant tree there (human planting strategy)
-- 
+- stochastic removal of fungus - either implement or remove from report
+- initialize trees with different volumes
+- function for addition of dead wood: p = V_t / (1 + V_t) (V_t is total volume in neighbourhood)
 """
 
 
 class Forest(Model):
+    '''
+    TODO:
+    Things to keep track of:
+    - total volume of existing trees
+    - total volume of harvested trees
+    - number of trees
+    - number of planted trees
+    - number of fungi
+    - number of infected trees
+    '''
     def __init__(self, width, height, n_init_trees, n_init_fungi, max_substrate=3, max_soil_fertility=3):
 
         super().__init__()
