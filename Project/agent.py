@@ -20,6 +20,8 @@ class Tree(Organism):
     def __init__(self, unique_id, model, pos, start_volume=1):
         super().__init__(unique_id, model, pos)
 
+        self.agent_type = 'Tree'
+
         self.volume = start_volume
         self.dispersal_coeff = 4
         self.infected = False
@@ -72,6 +74,7 @@ class Fungus(Organism):
 
         # Start with 1 energy
         self.energy = 1
+        self.agent_type = 'Fungus'
     
 
     def consume(self):

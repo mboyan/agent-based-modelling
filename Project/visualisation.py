@@ -1,16 +1,16 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import agent as agt
 
 from mesa.experimental import JupyterViz
-from agent import Tree, Fungus, Organism
 
 def agent_portrayal(agent):
-    if isinstance(agent, Fungus):
-        size = 10
+    if agent.agent_type == "Fungus":
+        size = 4
         color = "tab:blue"
         alpha = agent.energy / 4
-    if isinstance(agent, Tree):
-        size = agent.volume
+    if agent.agent_type == "Tree":
+        size = agent.volume + 5
         color = "tab:green"
         alpha = 1
     return {"size": size, "color": color, "alpha": alpha}
