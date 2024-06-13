@@ -116,6 +116,14 @@ class Forest(Model):
         getattr(self, f'schedule_{agent.__class__.__name__}').remove(agent)
     
 
+    def add_substrate(self):
+        """
+        Stochastically adds substrate (woody debris)
+        based on the distance to all trees in the lattice.
+        On average, 
+        """
+
+
     def step(self):
         """
         Method that calls the step method for each of the trees, and then for each of the fungi.
