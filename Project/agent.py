@@ -8,9 +8,9 @@ class Organism(Agent):
     
     def __init__(self, unique_id, model, pos):
         super().__init__(unique_id, model)
-        
-        self.pos = pos
+
         self.model.grid.place_agent(self, pos)
+        self.pos = pos
 
 
 class Tree(Organism):
@@ -120,7 +120,6 @@ class Fungus(Organism):
         
         substrate = self.model.grid.properties['substrate'].data[x, y]
         self.model.grid.properties['substrate'].set_cell((x, y), substrate - 1)
-
         
         self.energy += 1
         self.dispersal_coeff = 1

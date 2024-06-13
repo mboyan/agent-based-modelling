@@ -24,6 +24,7 @@ def agent_portrayal(agent):
         alpha = 1
     return {"size": size, "color": color, "alpha": alpha}
 
+
 def create_jupyter_viz(model, model_params, measures):
     """
     Function to create a JupyterViz object for the model.
@@ -32,3 +33,13 @@ def create_jupyter_viz(model, model_params, measures):
     page = JupyterViz(model, model_params, measures, name="FA Model", agent_portrayal=agent_portrayal)
 
     return page
+
+
+def plot_property_layer(model, layer_name):
+    """
+    Function to plot a property layer of the model.
+    """
+
+    plt.imshow(model.grid.properties[layer_name].data, cmap='viridis')
+    plt.colorbar()
+    plt.show()
