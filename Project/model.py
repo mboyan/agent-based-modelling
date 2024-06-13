@@ -60,14 +60,14 @@ class Forest(Model):
               "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data)})
         
         # Initialise populations
-        self.init_population(n_init_trees, Tree, (5, 30))
-        self.init_population(n_init_fungi, Fungus, (1, 3))
+        self.init_population(n_init_trees, Tree, (5, 30), 4)
+        self.init_population(n_init_fungi, Fungus, (1, 3), 1)
 
         self.running = True
         self.datacollector.collect(self)
+    
 
-
-    def init_population(self, n_agents, agent_type, init_size_range):
+    def init_population(self, n_agents, agent_type, init_size_range, dispersal_coeff=1):
         """
         Method that initializes the population of trees and fungi.
         Args:
@@ -91,16 +91,16 @@ class Forest(Model):
 
         # Add agents to the grid
         for coord in coords_select:
-            self.new_agent(agent_type, coord, np.random.randint(init_size_range[0], init_size_range[1] + 1))
+            self.new_agent(agent_type, coord, np.random.randint(init_size_range[0], init_size_range[1] + 1), dispersal_coeff)
 
     
-    def new_agent(self, agent_type, pos, init_size=1):
+    def new_agent(self, agent_type, pos, init_size=1, disp=1):
         """
         Method that enables us to add agents of a given type.
         """
         
         # Create a new agent of the given type
-        new_agent = agent_type(self.next_id(), self, pos, init_size)
+        new_agent = agent_type(self.next_id(), self, pos, init_size, disp)
 
         # Add agent to schedule
         getattr(self, f'schedule_{agent_type.__name__}').add(new_agent)

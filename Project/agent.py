@@ -32,8 +32,8 @@ class Tree(Organism):
         decay = subs_site / (subs_site + fert_site) if subs_site !=0 else 1
     """
 
-    def __init__(self, unique_id, model, pos, init_volume=1, base_growth_rate=1):
-        super().__init__(unique_id, model, pos)
+    def __init__(self, unique_id, model, pos, disp, init_volume=1, base_growth_rate=1):
+        super().__init__(unique_id, model, pos, disp)
 
         self.agent_type = 'Tree'
 
@@ -68,10 +68,16 @@ class Tree(Organism):
         volume_nbrs = [agent.volume for agent in nbr_agents if isinstance(agent, Tree)]
         volume_nbrs = sum(volume_nbrs)
 
+        # Competition
+        competition = self.volume / (self.volume + volume_nbrs)
+
         # Growth term (can inclue)
-        volume_add = self.base_growth_rate / self.volume + self.volume * fertility + self.volume / (volume_nbrs + 1e-6)
+        volume_add = (self.base_growth_rate / self.volume + self.volume * fertility + self.volume) * competition
 
         self.volume += volume_add
+
+        # Hard limit, remove later
+        self.volume = min(500, self.volume)
 
     
     def shed_leaves(self):
@@ -89,6 +95,7 @@ class Tree(Organism):
                     if np.random.random() < np.exp(-dist/self.dispersal_coeff):
                         self.model.new_agent(Fungus, (x, y))
     
+
     def harvest(self):
         """
         How a tree 'harvests itself':
@@ -204,11 +211,11 @@ class Fungus(Organism):
         woody_cells = substrate_layer.select_cells(has_substrate)
         for cell in woody_cells:
             # only infect at different location
-            if cell != self.pos:
+            if cell[0] != self.pos[0] and cell[1] != self.pos[1]:
                 self.infect_wood(cell)
         
         # tree infection
-        trees = self.model.getall(Tree)
+        trees = self.model.schedule_Tree.agents
         for tree in trees:
             if not tree.infected:
                 self.infect_tree(tree)
