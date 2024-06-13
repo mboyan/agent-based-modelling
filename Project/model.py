@@ -45,17 +45,19 @@ class Forest(Model):
         
         # Add initial substrate
         self.grid.add_property_layer(PropertyLayer('substrate', self.width, self.height, 1))
-        self.grid.properties['substrate'].data = np.random.randint(0, max_substrate, (self.width, self.height))
+        self.grid.properties['substrate'].data = np.random.uniform(0, max_substrate, (self.width, self.height))
 
         # Add initial soil fertility
         self.grid.add_property_layer(PropertyLayer('soil_fertility', self.width, self.height, 1))
-        self.grid.properties['soil_fertility'].data = np.random.randint(0, max_soil_fertility, (self.width, self.height))
+        self.grid.properties['soil_fertility'].data = np.random.uniform(0, max_soil_fertility, (self.width, self.height))
 
         self.datacollector = DataCollector(
              {"Trees": lambda m: self.schedule_Tree.get_agent_count(),
               "Fungi": lambda m: self.schedule_Fungus.get_agent_count(),
               "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.schedule_Tree.agents]),
-              "Infected Trees": lambda m: sum([agent.infected for agent in self.schedule_Tree.agents])})
+              "Infected Trees": lambda m: sum([agent.infected for agent in self.schedule_Tree.agents]),
+              "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
+              "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data)})
         
         # Initialise populations
         self.init_population(n_init_trees, Tree, (5, 30))
@@ -116,10 +118,51 @@ class Forest(Model):
         getattr(self, f'schedule_{agent.__class__.__name__}').remove(agent)
     
 
+    def calc_dist(self, pos1, pos2):
+        """
+        Method that calculates the Euclidean distance between two points.
+        """
+        return np.sqrt((pos1[..., 0] - pos2[..., 0])**2 + (pos1[..., 1] - pos2[..., 1])**2)
+
+
+    def add_substrate(self):
+        """
+        Stochastically adds substrate (woody debris)
+        based on the distance to all trees in the lattice.
+        On average, 2.5*1e-4 of the tree biomass is added per time step.
+        """
+
+        coords = np.transpose(np.indices((self.width, self.height)), (1, 2, 0))
+
+        # Assign probabilities to all lattice sites
+        lattice_probs = np.zeros((self.width, self.height))
+        for tree in self.schedule_Tree.agents:
+            lattice_tree_dist = self.calc_dist(np.array(tree.pos), coords)
+            lattice_probs += np.exp(-lattice_tree_dist / (tree.volume ** (2/3)))
+        
+        # Normalize probabilities
+        lattice_probs /= np.sum(lattice_probs)
+
+        # Distribute substrate
+        for tree in self.schedule_Tree.agents:
+            # Portion of substrate to add to each lattice site
+            # Assumes an average tree volume of 100
+            n_portions = int(np.floor(0.75 * tree.volume))
+
+            # Lattice sites to add substrate to
+            coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True, p=lattice_probs.flatten())
+            coords_select = coords.reshape(-1, 2)[coords_idx_select]
+
+            for coord in coords_select:
+                self.grid.properties['substrate'].data[tuple(coord)] += 1
+
+
     def step(self):
         """
         Method that calls the step method for each of the trees, and then for each of the fungi.
         """
+        self.add_substrate()
+
         self.schedule_Tree.step()
         self.schedule_Fungus.step()
 
