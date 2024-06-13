@@ -11,16 +11,18 @@ Analysis stuff
 '''
 
 def agent_portrayal(agent):
+    size = 5
+    color = "tab:blue"
+    alpha = 1
     if agent.agent_type == "Fungus":
         size = 4
         color = "tab:blue"
         alpha = agent.energy / 4
     if agent.agent_type == "Tree":
-        size = agent.volume + 5
+        size = agent.volume
         color = "tab:green"
         alpha = 1
     return {"size": size, "color": color, "alpha": alpha}
-
 
 def create_jupyter_viz(model, model_params, measures):
     """

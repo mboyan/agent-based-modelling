@@ -8,8 +8,9 @@ class Organism(Agent):
     
     def __init__(self, unique_id, model, pos):
         super().__init__(unique_id, model)
-
+        
         self.pos = pos
+        self.model.grid.place_agent(self, pos)
 
 
 class Tree(Organism):
