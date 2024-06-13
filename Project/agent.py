@@ -46,7 +46,6 @@ class Tree(Organism):
         neighbourhood = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
         fertility_nbrs = [self.model.grid.properties['soil_fertility'].data[x, y] for x, y in neighbourhood]
         fertility = 0.5 * fertility_center + 0.5 * np.mean(fertility_nbrs)
-        print(fertility)
 
         # Get neighbours occupied by trees
         nbr_agents = self.model.grid.get_neighbors(tuple(self.pos), moore=True, include_center=False)
