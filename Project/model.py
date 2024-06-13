@@ -49,7 +49,7 @@ class Forest(Model):
         
         # Add initial substrate
         self.grid.add_property_layer(PropertyLayer('substrate', self.width, self.height, 1))
-        self.grid.properties['substrate'].data = np.random.uniform(0, max_substrate, (self.width, self.height))
+        self.grid.properties['substrate'].data = np.random.randint(0, max_substrate, (self.width, self.height))
 
         # Add initial soil fertility
         self.grid.add_property_layer(PropertyLayer('soil_fertility', self.width, self.height, 1))
@@ -152,8 +152,8 @@ class Forest(Model):
         # Distribute substrate
         for tree in self.schedule_Tree.agents:
             # Portion of substrate to add to each lattice site
-            # Assumes an average tree volume of 100
-            n_portions = int(np.floor(0.75 * tree.volume))
+            # Assumes an average tree volume of 10
+            n_portions = int(np.floor(0.075 * tree.volume))
 
             # Lattice sites to add substrate to
             coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True, p=lattice_probs.flatten())

@@ -108,9 +108,11 @@ class Tree(Organism):
         
         # Check volume threshold
         if self.volume > harvest_vol_threshold:
+
             # Check percentage of surrounding trees threshold
             neighbouring_agents = self.model.grid.get_neighbors(tuple(self.pos), moore=True, include_center=False)
-            count_trees = sum(1 for agent in neighbouring_agents if isinstance(agent, Tree))
+            count_trees = len([agent for agent in neighbouring_agents if agent.agent_type == "Tree"])
+
             if count_trees / 8 > harvest_percent_threshold:
                 # Include a random probability
                 if random.random() < harvest_probability:
@@ -118,9 +120,6 @@ class Tree(Organism):
                     self.model.remove_agent(self)  # Remove the tree
                     return True
         return False  # Tree is not harvested
-
-
-    
 
     
     def step(self):
@@ -158,6 +157,7 @@ class Fungus(Organism):
         
         # eat wood + deposit fertility
         if substrate > 0:
+            # self.model.grid.properties['substrate'].set_cell((x, y), max(0, substrate - 1))
             self.model.grid.properties['substrate'].set_cell((x, y), substrate - 1)
             self.model.grid.properties['soil_fertility'].set_cell((x,y), fertility + 1)
             self.energy += 1
@@ -196,6 +196,7 @@ class Fungus(Organism):
         # probabilistic infection
         if np.random.random() < prob:
             tree.infected = True
+
 
     def sporulate(self):
         """
