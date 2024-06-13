@@ -62,11 +62,14 @@ class Tree(Organism):
         volume_nbrs = sum(volume_nbrs)
 
         # Growth term (can inclue)
-        volume_add = self.base_growth_rate / self.volume + self.volume * fertility + self.volume / (volume_nbrs + 1e-6)
+        # THIS IS SOOO COMPUTATIONALLY HEAVY oops
 
-        self.volume += volume_add
+        base_vol_increase = 0.0392/4 * self.volume
+        vol_fertility = base_vol_increase * 1.05 if (self.volume < 10 and fertility > 1) else base_vol_increase * 1
+        vol_add = vol_fertility * 0.9 if volume_nbrs/self.volume < 0.5 else vol_fertility * 1
+        self.volume += vol_add
 
-    
+
     def shed_leaves(self):
         """
         Shed leaves.
