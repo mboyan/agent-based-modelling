@@ -43,7 +43,7 @@ class Tree(Organism):
         self.base_growth_rate = base_growth_rate
 
 
-        self.harvest_params = [20,0.5,0.6]
+        #self.harvest_params = harvest_params # [20,0.5,0.6]
 
 
     def grow(self):
@@ -103,8 +103,9 @@ class Tree(Organism):
             If the volume is above a threshold and if x percent of the surrounding 8 trees are still present
             -> can be harvested with probability p
         """
-        harvest_vol_threshold, harvest_percent_threshold, harvest_probability = self.harvest_params
+        harvest_vol_threshold, harvest_percent_threshold, harvest_probability = self.model.harvest_params
 
+        
         # Check volume threshold
         if self.volume > harvest_vol_threshold:
             # Check percentage of surrounding trees threshold
@@ -113,7 +114,8 @@ class Tree(Organism):
             if count_trees / 8 > harvest_percent_threshold:
                 # Include a random probability
                 if random.random() < harvest_probability:
-                    self.model.grid.remove_agent(self)  # Remove the tree
+                    self.model.harvest_volume =+ self.volume
+                    self.model.remove_agent(self)  # Remove the tree
                     return True
         return False  # Tree is not harvested
 

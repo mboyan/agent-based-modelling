@@ -30,12 +30,16 @@ class Forest(Model):
     X number of fungi
     X number of infected trees
     '''
-    def __init__(self, width, height, n_init_trees, n_init_fungi, max_substrate=3, max_soil_fertility=3):
+    def __init__(self, width, height, n_init_trees, n_init_fungi, harvest_params, max_substrate=3, max_soil_fertility=3):
 
         super().__init__()
 
         self.height = width
         self.width = height
+        self.harvest_params = harvest_params
+
+        # Initialize harvested volume
+        self.harvest_volume = 0
 
         # Create schedule
         self.schedule_Tree = RandomActivation(self)
@@ -57,7 +61,9 @@ class Forest(Model):
               "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.schedule_Tree.agents]),
               "Infected Trees": lambda m: sum([agent.infected for agent in self.schedule_Tree.agents]),
               "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
-              "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data)})
+              "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data),
+              "Harvested volume": lambda m: sum([agent.volume for agent in self.schedule_Tree.agents]),
+              "Harvested volume": lambda m: m.harvest_volume})
         
         # Initialise populations
         self.init_population(n_init_trees, Tree, (5, 30), 4)
