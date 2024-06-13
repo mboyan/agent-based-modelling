@@ -21,6 +21,12 @@ class Tree(Organism):
     - add/define tree growth + consume fertility (from entire Moore neighborhood (+?))
     - define harvesting in die function
     - different initialization volumes
+    
+    NOTES:
+    code for calculating decay:
+        subs_site = self.model.grid.properties['substrate'].data[x, y]
+        fert_site = self.model.grid.properties['soil_fertility'].data[x, y]
+        decay = subs_site / (subs_site + fert_site) if subs_site !=0 else 1
     """
 
     def __init__(self, unique_id, model, pos, init_volume=1, base_growth_rate=1):
@@ -134,10 +140,8 @@ class Fungus(Organism):
         dist = np.sqrt((x - self.pos[0])**2 + (y - self.pos[1])**2)
         
         subs_site = self.model.grid.properties['substrate'].data[x, y]
-        # fert_site = self.model.grid.properties['soil_fertility'].data[x, y]
-        # decay = subs_site / (subs_site + fert_site) if subs_site !=0 else 1
         
-        # count fungi in cell
+        # count fungi in cell to scale probability with space competition
         contents = self.model.grid.get_cell_list_contents(cell)
         fun_count = len([agent for agent in contents if type(agent)==Fungus])
         
