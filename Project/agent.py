@@ -46,6 +46,7 @@ class Tree(Organism):
         neighbourhood = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
         fertility_nbrs = [self.model.grid.properties['soil_fertility'].data[x, y] for x, y in neighbourhood]
         fertility = 0.5 * fertility_center + 0.5 * np.mean(fertility_nbrs)
+        print(fertility)
 
         # Get neighbours occupied by trees
         nbr_agents = self.model.grid.get_neighbors(tuple(self.pos), moore=True, include_center=False)
@@ -56,8 +57,11 @@ class Tree(Organism):
         volume_nbrs = [agent.volume for agent in nbr_agents if isinstance(agent, Tree)]
         volume_nbrs = sum(volume_nbrs)
 
-        # Growth term (can inclue)
-        volume_add = self.base_growth_rate / self.volume + self.volume * fertility + self.volume / (volume_nbrs + 1e-6)
+        # Competition with neighbours
+        competition = self.volume / (volume_nbrs + self.volume)
+
+        # Growth term
+        volume_add = (self.base_growth_rate / self.volume + self.volume * fertility) * competition
 
         self.volume += volume_add
 
