@@ -6,10 +6,11 @@ class Organism(Agent):
     General class for all organisms in the model.
     """
     
-    def __init__(self, unique_id, model, pos):
+    def __init__(self, unique_id, model, pos, disp):
         super().__init__(unique_id, model)
 
         self.pos = pos
+        self.disp = disp
 
 
 class Tree(Organism):
@@ -101,16 +102,13 @@ class Tree(Organism):
 class Fungus(Organism):
     """
     A fungus agent.
-    TODO
-    - sporulate & spore_infect = reproduce in agent.py -> combine
     """
     
-    def __init__(self, unique_id, model, pos, init_energy=1):
-        super().__init__(unique_id, model, pos)
+    def __init__(self, unique_id, model, pos, disp, init_energy=1):
+        super().__init__(unique_id, model, pos, disp)
 
         self.agent_type = 'Fungus'
         self.energy = init_energy
-        # self.disp = disp
     
 
     def consume(self):
@@ -118,9 +116,9 @@ class Fungus(Organism):
         Consume substrate.
         """
         x, y = self.pos
-        
         substrate = self.model.grid.properties['substrate'].data[x, y]
         fertility = self.model.grid.properties['soil_fertility'].data[x, y]
+        
         # eat wood + deposit fertility
         if substrate > 0:
             self.model.grid.properties['substrate'].set_cell((x, y), substrate - 1)
@@ -130,7 +128,6 @@ class Fungus(Organism):
         else:
             self.energy -= 1
         
-        # self.dispersal_coeff = 1 ?
     
     def infect_wood(self, cell):
         '''
@@ -138,18 +135,16 @@ class Fungus(Organism):
         '''
         x,y = cell
         dist = np.sqrt((x - self.pos[0])**2 + (y - self.pos[1])**2)
-        
-        subs_site = self.model.grid.properties['substrate'].data[x, y]
-        
+                
         # count fungi in cell to scale probability with space competition
         contents = self.model.grid.get_cell_list_contents(cell)
         fun_count = len([agent for agent in contents if type(agent)==Fungus])
         
         # inoculation probability
-        prob = 1/(fun_count+1) * np.exp(-dist/self.dispersal_coeff)
+        prob = 1/(fun_count+1) * np.exp(-dist/self.disp)
         
-        # try to infect wood at different location
-        if np.random.random() < prob and cell != self.pos: 
+        # probabilistic infection
+        if np.random.random() < prob: 
             self.model.new_agent(Fungus, (x, y))
         
         
@@ -159,31 +154,30 @@ class Fungus(Organism):
         '''
         x,y = tree.pos
         dist = np.sqrt((x - self.pos[0])**2 + (y - self.pos[1])**2)
-        prob = np.exp(-dist/self.dispersal_coeff)
+        prob = np.exp(-dist/self.disp)
 
-        # infect tree with calculated probability
+        # probabilistic infection
         if np.random.random() < prob:
             tree.infected = True
 
     def sporulate(self):
         """
         Reproduce if enough energy.
-        TODO
-        - don't inoculate the same substrate twice
         """
-        # sporulate
         self.energy -= 4
 
         # substrate infection      
         substrate_layer = self.model.grid.properties['substrate']
 
+        # select cells that have substrate
         def has_substrate(cell_value):
             return cell_value > 0
-
-        # select cells that have substrate
+        
         woody_cells = substrate_layer.select_cells(has_substrate)
         for cell in woody_cells:
-            self.infect_wood(cell)
+            # only infect at different location
+            if cell != self.pos:
+                self.infect_wood(cell)
         
         # tree infection
         trees = self.model.getall(Tree)
@@ -192,7 +186,6 @@ class Fungus(Organism):
                 self.infect_tree(tree)
                 
 
-        
     def die(self):
         """
         Die if no energy or killed through environment
