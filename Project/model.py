@@ -23,12 +23,12 @@ class Forest(Model):
     '''
     TODO:
     Things to keep track of:
-    - total volume of existing trees
+    X total volume of existing trees
     - total volume of harvested trees
-    - number of trees
+    X number of trees
     - number of planted trees
-    - number of fungi
-    - number of infected trees
+    X number of fungi
+    X number of infected trees
     '''
     def __init__(self, width, height, n_init_trees, n_init_fungi, max_substrate=3, max_soil_fertility=3):
 
@@ -53,7 +53,9 @@ class Forest(Model):
 
         self.datacollector = DataCollector(
              {"Trees": lambda m: self.schedule_Tree.get_agent_count(),
-              "Fungi": lambda m: self.schedule_Fungus.get_agent_count()})
+              "Fungi": lambda m: self.schedule_Fungus.get_agent_count(),
+              "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.schedule_Tree.agents]),
+              "Infected Trees": lambda m: sum([agent.infected for agent in self.schedule_Tree.agents])})
         
         # Initialise populations
         self.init_population(n_init_trees, Tree, (5, 30))
