@@ -84,27 +84,17 @@ class Forest(Model):
         for coord in coords_select:
             self.new_agent(agent_type, coord)
 
-        # for i in range(n_agents):
-        #     x = random.randrange(self.width)
-        #     y = random.randrange(self.height)
-            
-        #     self.new_agent(agent_type, (x, y))
-
     
     def new_agent(self, agent_type, pos):
         """
         Method that enables us to add agents of a given type.
         """
-        # self.n_agents += 1
         
         # Create a new agent of the given type
         new_agent = agent_type(self.next_id(), self, pos)
         
         # Place the agent on the grid
         self.grid.place_agent(new_agent, pos)
-        
-        # And add the agent to the model so we can track it
-        # self.agents.append(new_agent)
 
         # Add agent to schedule
         getattr(self, f'schedule_{agent_type.__name__}').add(new_agent)
@@ -114,13 +104,9 @@ class Forest(Model):
         """
         Method that enables us to remove passed agents.
         """
-        # self.n_agents -= 1
         
         # Remove agent from grid
         self.grid.remove_agent(agent)
-        
-        # Remove agent from model
-        # self.agents.remove(agent)
 
         # Remove agent from schedule
         getattr(self, f'schedule_{agent.__class__.__name__}').remove(agent)
@@ -130,9 +116,6 @@ class Forest(Model):
         """
         Method that calls the step method for each of the trees, and then for each of the fungi.
         """
-        # print(self.grid.properties['substrate'].data[0,0])
-        # for agent in list(self.agents):
-        #     agent.step()
         self.schedule_Tree.step()
         self.schedule_Fungus.step()
 
