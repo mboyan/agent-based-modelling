@@ -23,12 +23,12 @@ class Tree(Organism):
     - different initialization volumes
     """
 
-    def __init__(self, unique_id, model, pos, base_growth_rate=1, start_volume=1):
+    def __init__(self, unique_id, model, pos, init_volume=1, base_growth_rate=1):
         super().__init__(unique_id, model, pos)
 
         self.agent_type = 'Tree'
 
-        self.volume = start_volume
+        self.volume = init_volume
         self.dispersal_coeff = 4
         self.infected = False
         self.base_growth_rate = base_growth_rate
@@ -43,20 +43,24 @@ class Tree(Organism):
 
         # Get fertility of current cell and its neighbours
         fertility_center = self.model.grid.properties['soil_fertility'].data[self.pos[0], self.pos[1]]
-        neighbourhood = self.model.grid.get_neighborhood(self.pos, moore=True, include_center=False)
-        fertility_nbrs = [self.model.grid_properties['soil_fertility'].data[x, y] for x, y in neighbourhood]
+        neighbourhood = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+        fertility_nbrs = [self.model.grid.properties['soil_fertility'].data[x, y] for x, y in neighbourhood]
         fertility = 0.5 * fertility_center + 0.5 * np.mean(fertility_nbrs)
 
         # Get neighbours occupied by trees
-        nbrs_with_trees = [1 for agent in neighbourhood if isinstance(agent, Tree)]
+        nbr_agents = self.model.grid.get_neighbors(tuple(self.pos), moore=True, include_center=False)
+        nbrs_with_trees = [1 for agent in nbr_agents if isinstance(agent, Tree)]
         nbrs_with_trees = sum(nbrs_with_trees)
 
         # Get total volume of neighbour trees
-        volume_nbrs = [agent.volume for agent in neighbourhood if isinstance(agent, Tree)]
+        volume_nbrs = [agent.volume for agent in nbr_agents if isinstance(agent, Tree)]
         volume_nbrs = sum(volume_nbrs)
 
-        # Growth term (can inclue)
-        volume_add = self.base_growth_rate / self.volume + self.volume * fertility + self.volume / (volume_nbrs + 1e-6)
+        # Competition with neighbours
+        competition = self.volume / (volume_nbrs + self.volume)
+
+        # Growth term
+        volume_add = (self.base_growth_rate / self.volume + self.volume * fertility) * competition
 
         self.volume += volume_add
 
@@ -96,11 +100,11 @@ class Fungus(Organism):
     - sporulate & spore_infect = reproduce in agent.py -> combine
     """
     
-    def __init__(self, unique_id, model, pos):
+    def __init__(self, unique_id, model, pos, init_energy=1):
         super().__init__(unique_id, model, pos)
 
         # Start with 1 energy
-        self.energy = 1
+        self.energy = init_energy
         self.agent_type = 'Fungus'
     
 
