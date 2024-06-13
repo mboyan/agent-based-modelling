@@ -122,8 +122,8 @@
     </configuration>
     <list>
       <item itemvalue="Python.Unnamed" />
-      <item itemvalue="Python.agents_paper" />
       <item itemvalue="Python.agent" />
+      <item itemvalue="Python.agents_paper" />
       <item itemvalue="Python.model" />
     </list>
     <recent_temporary>
