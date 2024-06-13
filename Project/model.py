@@ -44,28 +44,33 @@ class Forest(Model):
         self.grid = MultiGrid(self.width, self.height, torus=True)
         
         # Add initial substrate
-        substrate = np.random.randint(max_substrate)
-        self.grid.add_property_layer(PropertyLayer('substrate', self.width, self.height, substrate))
+        self.grid.add_property_layer(PropertyLayer('substrate', self.width, self.height, 1))
+        self.grid.properties['substrate'].data = np.random.randint(0, max_substrate, (self.width, self.height))
 
         # Add initial soil fertility
-        soil_fertility = np.random.randint(max_soil_fertility)
-        self.grid.add_property_layer(PropertyLayer('soil_fertility', self.width, self.height, soil_fertility))
+        self.grid.add_property_layer(PropertyLayer('soil_fertility', self.width, self.height, 1))
+        self.grid.properties['soil_fertility'].data = np.random.randint(0, max_soil_fertility, (self.width, self.height))
 
         self.datacollector = DataCollector(
              {"Trees": lambda m: self.schedule_Tree.get_agent_count(),
               "Fungi": lambda m: self.schedule_Fungus.get_agent_count()})
         
         # Initialise populations
-        self.init_population(n_init_trees, Tree)
-        self.init_population(n_init_fungi, Fungus)
+        self.init_population(n_init_trees, Tree, (5, 30))
+        self.init_population(n_init_fungi, Fungus, (1, 3))
 
         self.running = True
         self.datacollector.collect(self)
 
 
-    def init_population(self, n_agents, agent_type):
+    def init_population(self, n_agents, agent_type, init_size_range):
         """
         Method that initializes the population of trees and fungi.
+        Args:
+            n_agents (int): number of agents to add
+            agent_type (Organism): class of the agent to add
+            init_size_range (tuple or list): range of agent sizes [min, max] -
+                volume for trees and energy for fungi
         """
 
         # Get lattice coordinates
@@ -82,19 +87,16 @@ class Forest(Model):
 
         # Add agents to the grid
         for coord in coords_select:
-            self.new_agent(agent_type, coord)
+            self.new_agent(agent_type, coord, np.random.randint(init_size_range[0], init_size_range[1] + 1))
 
     
-    def new_agent(self, agent_type, pos):
+    def new_agent(self, agent_type, pos, init_size=1):
         """
         Method that enables us to add agents of a given type.
         """
         
         # Create a new agent of the given type
-        new_agent = agent_type(self.next_id(), self, pos)
-        
-        # Place the agent on the grid
-        self.grid.place_agent(new_agent, pos)
+        new_agent = agent_type(self.next_id(), self, pos, init_size)
 
         # Add agent to schedule
         getattr(self, f'schedule_{agent_type.__name__}').add(new_agent)
