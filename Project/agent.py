@@ -1,5 +1,6 @@
 import numpy as np
 from mesa import Agent
+import random
 
 class Organism(Agent):
     """
@@ -8,9 +9,10 @@ class Organism(Agent):
     
     def __init__(self, unique_id, model, pos, disp):
         super().__init__(unique_id, model)
-
+        
         self.pos = pos
         self.disp = disp
+        self.model.grid.place_agent(self, pos)
 
 
 class Tree(Organism):
@@ -41,6 +43,9 @@ class Tree(Organism):
         self.base_growth_rate = base_growth_rate
 
 
+        self.harvest_params = [20,0.5,0.6]
+
+
     def grow(self):
         """
         Grow the tree.
@@ -53,7 +58,6 @@ class Tree(Organism):
         neighbourhood = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
         fertility_nbrs = [self.model.grid.properties['soil_fertility'].data[x, y] for x, y in neighbourhood]
         fertility = 0.5 * fertility_center + 0.5 * np.mean(fertility_nbrs)
-        print(fertility)
 
         # Get neighbours occupied by trees
         nbr_agents = self.model.grid.get_neighbors(tuple(self.pos), moore=True, include_center=False)
@@ -64,11 +68,8 @@ class Tree(Organism):
         volume_nbrs = [agent.volume for agent in nbr_agents if isinstance(agent, Tree)]
         volume_nbrs = sum(volume_nbrs)
 
-        # Competition with neighbours
-        competition = self.volume / (volume_nbrs + self.volume)
-
-        # Growth term
-        volume_add = (self.base_growth_rate / self.volume + self.volume * fertility) * competition
+        # Growth term (can inclue)
+        volume_add = self.base_growth_rate / self.volume + self.volume * fertility + self.volume / (volume_nbrs + 1e-6)
 
         self.volume += volume_add
 
@@ -88,6 +89,30 @@ class Tree(Organism):
                     if np.random.random() < np.exp(-dist/self.dispersal_coeff):
                         self.model.new_agent(Fungus, (x, y))
     
+    def harvest(self):
+        """
+        How a tree 'harvests itself':
+        
+            If the volume is above a threshold and if x percent of the surrounding 8 trees are still present
+            -> can be harvested with probability p
+        """
+        harvest_vol_threshold, harvest_percent_threshold, harvest_probability = self.harvest_params
+
+        # Check volume threshold
+        if self.volume > harvest_vol_threshold:
+            # Check percentage of surrounding trees threshold
+            neighbouring_agents = self.model.grid.get_neighbors(tuple(self.pos), moore=True, include_center=False)
+            count_trees = sum(1 for agent in neighbouring_agents if isinstance(agent, Tree))
+            if count_trees / 8 > harvest_percent_threshold:
+                # Include a random probability
+                if random.random() < harvest_probability:
+                    self.model.grid.remove_agent(self)  # Remove the tree
+                    return True
+        return False  # Tree is not harvested
+
+
+    
+
     
     def step(self):
         """
@@ -97,6 +122,9 @@ class Tree(Organism):
 
         if self.infected:
             self.shed_leaves()
+        
+        self.harvest()
+
 
 
 class Fungus(Organism):
