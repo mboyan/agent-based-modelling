@@ -96,84 +96,114 @@ class Fungus(Organism):
     """
     A fungus agent.
     TODO
-    - define fertility: rates, quantities, units
-    - remove endophyticism check
     - sporulate & spore_infect = reproduce in agent.py -> combine
     """
     
     def __init__(self, unique_id, model, pos, init_energy=1):
         super().__init__(unique_id, model, pos)
 
-        # Start with 1 energy
-        self.energy = init_energy
         self.agent_type = 'Fungus'
+        self.energy = init_energy
+        # self.disp = disp
     
 
     def consume(self):
         """
         Consume substrate.
-        TODO:
-        - substrate cannot go below 0
-        - multiple fungi? account for simulateous eating
         """
         x, y = self.pos
         
         substrate = self.model.grid.properties['substrate'].data[x, y]
-        self.model.grid.properties['substrate'].set_cell((x, y), substrate - 1)
-
+        fertility = self.model.grid.properties['soil_fertility'].data[x, y]
+        # eat wood + deposit fertility
+        if substrate > 0:
+            self.model.grid.properties['substrate'].set_cell((x, y), substrate - 1)
+            self.model.grid.properties['soil_fertility'].set_cell((x,y), fertility + 1)
+            self.energy += 1
+        # consume reserve if no wood
+        else:
+            self.energy -= 1
         
-        self.energy += 1
-        self.dispersal_coeff = 1
+        # self.dispersal_coeff = 1 ?
     
+    def infect_wood(self, cell):
+        '''
+        Try to infect woody debris.
+        '''
+        x,y = cell
+        dist = np.sqrt((x - self.pos[0])**2 + (y - self.pos[1])**2)
+        
+        subs_site = self.model.grid.properties['substrate'].data[x, y]
+        # fert_site = self.model.grid.properties['soil_fertility'].data[x, y]
+        # decay = subs_site / (subs_site + fert_site) if subs_site !=0 else 1
+        
+        # count fungi in cell
+        contents = self.model.grid.get_cell_list_contents(cell)
+        fun_count = len([agent for agent in contents if type(agent)==Fungus])
+        
+        # inoculation probability
+        prob = 1/(fun_count+1) * np.exp(-dist/self.dispersal_coeff)
+        
+        # try to infect wood at different location
+        if np.random.random() < prob and cell != self.pos: 
+            self.model.new_agent(Fungus, (x, y))
+        
+        
+    def infect_tree(self,tree):
+        '''
+        Try to infect tree.
+        '''
+        x,y = tree.pos
+        dist = np.sqrt((x - self.pos[0])**2 + (y - self.pos[1])**2)
+        prob = np.exp(-dist/self.dispersal_coeff)
 
-    def reproduce(self):
+        # infect tree with calculated probability
+        if np.random.random() < prob:
+            tree.infected = True
+
+    def sporulate(self):
         """
         Reproduce if enough energy.
         TODO
         - don't inoculate the same substrate twice
         """
-        if self.energy > 4:
-            # Sporulate
-            self.energy -= 4
+        # sporulate
+        self.energy -= 4
 
-            # Scan all substrate on lattice
-            for x in range(self.model.width):
-                for y in range(self.model.height):
-                    if self.model.grid.properties['substrate'].data[x, y] > 0:
-                        
-                        dist = np.sqrt((x - self.pos[0])**2 + (y - self.pos[1])**2)
+        # substrate infection      
+        substrate_layer = self.model.grid.properties['substrate']
 
-                        # Inoculate substrate
-                        if np.random.random() < np.exp(-dist/self.dispersal_coeff): # and dist > 0
-                            self.model.new_agent(Fungus, (x, y))
-                        
-                        # Inoculate tree
-                        for agent in self.model.grid.get_cell_list_contents([(x, y)]):
-                            if isinstance(agent, Tree):
-                                if not agent.infected:
-                                    
-                                    # Decay status
-                                    subs_site = self.model.grid.properties['substrate'].data[x, y]
-                                    fert_site = self.model.grid.properties['soil_fertility'].data[x, y]
-                                    decay = subs_site / (subs_site + fert_site) if subs_site + fert_site else 0
+        def has_substrate(cell_value):
+            return cell_value > 0
 
-                                    if np.random.random() < decay * np.exp(-dist/self.dispersal_coeff):
-                                        agent.infected = True
-                                        agent.volume -= 1
-                                        break
+        # select cells that have substrate
+        woody_cells = substrate_layer.select_cells(has_substrate)
+        for cell in woody_cells:
+            self.infect_wood(cell)
+        
+        # tree infection
+        trees = self.model.getall(Tree)
+        for tree in trees:
+            if not tree.infected:
+                self.infect_tree(tree)
+                
+
         
     def die(self):
         """
-        Die if no energy.
+        Die if no energy or killed through environment
         """
-        if self.energy <= 0:
-            self.model.remove_agent(self)
+        self.model.remove_agent(self)
     
 
     def step(self):
         """
-        Fungus development step.
+        Fungus self-development step.
         """
-        self.reproduce()
         self.consume()
-        self.die()
+        
+        if self.energy > 4:
+            self.sporulate()
+        elif self.energy < 1:
+            self.die()
+            
