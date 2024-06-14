@@ -41,10 +41,7 @@ class Tree(Organism):
         self.dispersal_coeff = 4
         self.infected = False
         self.base_growth_rate = base_growth_rate
-
-
-        #self.harvest_params = harvest_params # [20,0.5,0.6]
-
+        
 
     def grow(self):
         """
@@ -182,6 +179,7 @@ class Fungus(Organism):
         
         # probabilistic infection
         if np.random.random() < prob: 
+            # self.model.new_agent(Fungus, (x, y))
             self.model.new_agent(Fungus, (x, y))
         
         
@@ -218,7 +216,7 @@ class Fungus(Organism):
                 self.infect_wood(cell)
         
         # tree infection
-        trees = self.model.schedule_Tree.agents
+        trees = self.model.getall(Tree)
         for tree in trees:
             if not tree.infected:
                 self.infect_tree(tree)
