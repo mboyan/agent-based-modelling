@@ -30,15 +30,30 @@ class Forest(Model):
     X number of fungi
     X number of infected trees
     '''
+<<<<<<< HEAD
 
     def __init__(self, width, height, n_init_trees, n_init_fungi, harvest_params, max_substrate=3,
                  max_soil_fertility=3):
+=======
+    def __init__(self, 
+                 width, 
+                 height, 
+                 n_init_trees, 
+                 n_init_fungi, 
+                 harvest_params, 
+                 max_substrate=3, 
+                 max_soil_fertility=3,
+                 top_n_sites=5):
+>>>>>>> b150aff (start tree planting)
 
         super().__init__()
 
         self.height = width
         self.width = height
         self.harvest_params = harvest_params
+
+        # Top n sites to plant a tree based on fertility and competition
+        self.top_n_sites = top_n_sites
 
         # Initialize harvested volume
         self.harvest_volume = 0
