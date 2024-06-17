@@ -149,11 +149,10 @@ class Forest(Model):
         """
         Method that calculates the fertility of the soil at position pos
         """
-        coord_self = pos
         coord_nbrs = self.grid.get_neighborhood(tuple(pos), moore=True, include_center=False)
 
-        fert_self = min((1,self.grid.properties['soil_fertility'].data[coord_self]))
-        fert_nbrs = sum([min(0.5, self.grid.properties['soil_fertility'].data[coord]) for coord in coord_nbrs])
+        fert_self = min((1,self.grid.properties['soil_fertility'].data[tuple(pos)]))
+        fert_nbrs = sum([min(0.5, self.grid.properties['soil_fertility'].data[tuple(coord)]) for coord in coord_nbrs])
         f_c = v_self/v_max * (fert_self + fert_nbrs)
 
         return f_c
@@ -162,7 +161,7 @@ class Forest(Model):
         """
         Method that calculates the competition of the position pos
         """
-        nbr_agents = self.grid.get_neighbors(pos, moore=True, include_center=False)
+        nbr_agents = self.grid.get_neighbors(tuple(pos), moore=True, include_center=False)
 
         vol_self = v_self
         vol_nbrs = sum([agent.volume for agent in nbr_agents if isinstance(agent, Tree)])
@@ -170,16 +169,21 @@ class Forest(Model):
         competition = vol_nbrs / (vol_self + vol_nbrs)
         return competition
 
-    def calc_r(self, pos, v_max, v_self=1):
+    def calc_r(self, pos, r0, v_max, v_self=1):
         """
         Methods calculates the r_effective of the position pos
+        Args:
+            pos (tuple): position of the agent
+            r0 (float): base growth rate
+            v_max (float): maximum volume of a tree
+            v_self (float): volume of the agent
         """
 
         f_c = self.calc_fert(pos, v_self, v_max)
         comp = self.calc_comp(pos, v_self)
-        F = 0.01 + f_c / (f_c + 10)
+        F = r0 + f_c / (f_c + 10)
 
-        r = 0.01 + 0.05 * F - 0.1 * comp
+        r = r0 + 0.05 * F - 0.1 * comp
         return r
 
     def getall(self, typeof):
@@ -187,13 +191,6 @@ class Forest(Model):
             return ([])
         else:
             istype = np.array([type(i) == typeof for i in self.schedule.agents])
-            ags = np.array(self.schedule.agents)
-            return list(ags[istype])
-    def getall(self, typeof):
-        if not any([ type(i)==typeof for i in self.schedule.agents ]):
-            return([])
-        else:
-            istype = np.array([ type(i)==typeof for i in self.schedule.agents ])
             ags = np.array(self.schedule.agents)
             return list(ags[istype])
 
