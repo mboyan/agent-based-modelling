@@ -30,7 +30,9 @@ class Forest(Model):
     X number of fungi
     X number of infected trees
     '''
-    def __init__(self, width, height, n_init_trees, n_init_fungi, harvest_params, max_substrate=3, max_soil_fertility=3):
+
+    def __init__(self, width, height, n_init_trees, n_init_fungi, harvest_params, max_substrate=3,
+                 max_soil_fertility=3):
 
         super().__init__()
 
@@ -42,36 +44,34 @@ class Forest(Model):
         self.harvest_volume = 0
 
         # Create schedule
-        self.schedule_Tree = RandomActivation(self)
-        self.schedule_Fungus = RandomActivation(self)
-        
+        self.schedule = RandomActivation(self)
         self.grid = MultiGrid(self.width, self.height, torus=True)
-        
+
         # Add initial substrate
         self.grid.add_property_layer(PropertyLayer('substrate', self.width, self.height, 1))
         self.grid.properties['substrate'].data = np.random.randint(0, max_substrate, (self.width, self.height))
 
         # Add initial soil fertility
         self.grid.add_property_layer(PropertyLayer('soil_fertility', self.width, self.height, 1))
-        self.grid.properties['soil_fertility'].data = np.random.uniform(0, max_soil_fertility, (self.width, self.height))
+        self.grid.properties['soil_fertility'].data = np.random.uniform(0, max_soil_fertility,
+                                                                        (self.width, self.height))
 
         self.datacollector = DataCollector(
-             {"Trees": lambda m: self.schedule_Tree.get_agent_count(),
-              "Fungi": lambda m: self.schedule_Fungus.get_agent_count(),
-              "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.schedule_Tree.agents]),
-              "Infected Trees": lambda m: sum([agent.infected for agent in self.schedule_Tree.agents]),
-              "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
-              "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data),
-              "Harvested volume": lambda m: sum([agent.volume for agent in self.schedule_Tree.agents]),
-              "Harvested volume": lambda m: m.harvest_volume})
-        
+            {"Trees": lambda m: len(self.getall(Tree)),
+             "Fungi": lambda m: len(self.getall(Fungus)),
+             "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.getall(Tree)]),
+             "Infected Trees": lambda m: sum([agent.infected for agent in self.getall(Tree)]),
+             "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
+             "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data),
+             "Harvested volume": lambda m: sum([agent.volume for agent in self.getall(Tree)]),
+             "Harvested volume": lambda m: m.harvest_volume})
+
         # Initialise populations
         self.init_population(n_init_trees, Tree, (5, 30), 4)
         self.init_population(n_init_fungi, Fungus, (1, 3), 1)
 
         self.running = True
         self.datacollector.collect(self)
-    
 
     def init_population(self, n_agents, agent_type, init_size_range, dispersal_coeff=1):
         """
@@ -91,45 +91,101 @@ class Forest(Model):
             replace = False
         else:
             replace = True
-        
+
         # Random coords sample
         coords_select = coords[np.random.choice(len(coords), n_agents, replace=replace)]
 
         # Add agents to the grid
         for coord in coords_select:
-            self.new_agent(agent_type, coord, np.random.randint(init_size_range[0], init_size_range[1] + 1), dispersal_coeff)
+            self.new_agent(agent_type, coord, np.random.randint(init_size_range[0], init_size_range[1] + 1),
+                           dispersal_coeff)
+            # params = [coord, np.random.randint(init_size_range[0], init_size_range[1] + 1), dispersal_coeff]
+            # self.test_agent(agent_type, params)
 
-    
     def new_agent(self, agent_type, pos, init_size=1, disp=1):
         """
         Method that enables us to add agents of a given type.
         """
-        
+
         # Create a new agent of the given type
         new_agent = agent_type(self.next_id(), self, pos, init_size, disp)
 
         # Add agent to schedule
-        getattr(self, f'schedule_{agent_type.__name__}').add(new_agent)
-    
+        self.schedule.add(new_agent)
+
+    # def test_agent(self, agent_type, pos, init_size=1, disp=1):
+    #     '''
+    #     Generalized agent addition function trial.
+    #     '''
+    #     # print(*params)
+    #     # if agent_type == 'Fungus':
+    #         # [print(f'{agent_type} {type(param)}') for param in params]
+    #     # agent = agent_type(self.next_id(), self, *params)
+    #     new_agent = agent_type(self.next_id(), self, pos, init_size, disp)
+
+    #     self.schedule.add(new_agent)
 
     def remove_agent(self, agent):
         """
         Method that enables us to remove passed agents.
         """
-        
+
         # Remove agent from grid
         self.grid.remove_agent(agent)
 
         # Remove agent from schedule
-        getattr(self, f'schedule_{agent.__class__.__name__}').remove(agent)
-    
+        self.schedule.remove(agent)
 
     def calc_dist(self, pos1, pos2):
         """
         Method that calculates the Euclidean distance between two points.
         """
-        return np.sqrt((pos1[..., 0] - pos2[..., 0])**2 + (pos1[..., 1] - pos2[..., 1])**2)
+        return np.sqrt((pos1[..., 0] - pos2[..., 0]) ** 2 + (pos1[..., 1] - pos2[..., 1]) ** 2)
 
+    def calc_fert(self, pos, v_self, v_max):
+        """
+        Method that calculates the fertility of the soil at position pos
+        """
+        coord_self = pos
+        coord_nbrs = self.grid.get_neighborhood(tuple(pos), moore=True, include_center=False)
+
+        fert_self = min((1,self.grid.properties['soil_fertility'].data[coord_self]))
+        fert_nbrs = sum([min(0.5, self.grid.properties['soil_fertility'].data[coord]) for coord in coord_nbrs])
+        f_c = v_self/v_max * (fert_self + fert_nbrs)
+
+        return f_c
+
+    def calc_comp(self, pos, v_self):
+        """
+        Method that calculates the competition of the position pos
+        """
+        nbr_agents = self.grid.get_neighbors(pos, moore=True, include_center=False)
+
+        vol_self = v_self
+        vol_nbrs = sum([agent.volume for agent in nbr_agents if isinstance(agent, Tree)])
+
+        competition = vol_nbrs / (vol_self + vol_nbrs)
+        return competition
+
+    def calc_r(self, pos, v_max, v_self=1):
+        """
+        Methods calculates the r_effective of the position pos
+        """
+
+        f_c = self.calc_fert(pos, v_self, v_max)
+        comp = self.calc_comp(pos, v_self)
+        F = 0.01 + f_c / (f_c + 10)
+
+        r = 0.01 + 0.05 * F - 0.1 * comp
+        return r
+
+    def getall(self, typeof):
+        if not any([type(i) == typeof for i in self.schedule.agents]):
+            return ([])
+        else:
+            istype = np.array([type(i) == typeof for i in self.schedule.agents])
+            ags = np.array(self.schedule.agents)
+            return list(ags[istype])
 
     def add_substrate(self):
         """
@@ -142,26 +198,26 @@ class Forest(Model):
 
         # Assign probabilities to all lattice sites
         lattice_probs = np.zeros((self.width, self.height))
-        for tree in self.schedule_Tree.agents:
+        for tree in self.getall(Tree):
             lattice_tree_dist = self.calc_dist(np.array(tree.pos), coords)
-            lattice_probs += np.exp(-lattice_tree_dist / (tree.volume ** (2/3)))
-        
+            lattice_probs += np.exp(-lattice_tree_dist / (tree.volume ** (2 / 3)))
+
         # Normalize probabilities
         lattice_probs /= np.sum(lattice_probs)
 
         # Distribute substrate
-        for tree in self.schedule_Tree.agents:
+        for tree in self.getall(Tree):
             # Portion of substrate to add to each lattice site
             # Assumes an average tree volume of 10
             n_portions = int(np.floor(0.075 * tree.volume))
 
             # Lattice sites to add substrate to
-            coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True, p=lattice_probs.flatten())
+            coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True,
+                                                 p=lattice_probs.flatten())
             coords_select = coords.reshape(-1, 2)[coords_idx_select]
 
             for coord in coords_select:
                 self.grid.properties['substrate'].data[tuple(coord)] += 1
-
 
     def step(self):
         """
@@ -169,12 +225,10 @@ class Forest(Model):
         """
         self.add_substrate()
 
-        self.schedule_Tree.step()
-        self.schedule_Fungus.step()
+        self.schedule.step()
 
         # Save statistics
         self.datacollector.collect(self)
-
 
     def run_model(self, n_steps=100):
         """
@@ -182,4 +236,3 @@ class Forest(Model):
         """
         for i in range(n_steps):
             self.step()
-            
