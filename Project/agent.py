@@ -32,7 +32,7 @@ class Tree(Organism):
         decay = subs_site / (subs_site + fert_site) if subs_site !=0 else 1
     """
 
-    def __init__(self, unique_id, model, pos, disp, leaffall=4, init_volume=1, base_growth_rate=1):
+    def __init__(self, unique_id, model, pos, disp, leaffall=4, init_volume=1, base_growth_rate=1.05):
         super().__init__(unique_id, model, pos, disp)
 
         self.agent_type = 'Tree'
@@ -41,7 +41,7 @@ class Tree(Organism):
         self.dispersal_coeff = 4
         self.infected = False
         self.v_max = 100
-        self.base_growth_rate = base_growth_rate
+        self.base_growth_rate = base_growth_rate # Must be at least 1.05 to avoid negative r_effective
         self.leaffall = leaffall
 
     def grow(self):
@@ -52,10 +52,11 @@ class Tree(Organism):
         """
 
         v_current = self.volume
-        r = self.model.calc_r(self.pos, self.v_max, self.volume)
-        v_update = v_current * np.exp(r * np.log(v_max/self.volume))
+        r = self.model.calc_r(self.pos, self.base_growth_rate, self.v_max, self.volume)
+        v_update = v_current * np.exp(r * np.log(self.v_max/self.volume))
 
         self.volume = v_update
+        print(f'Volume: {v_current} -> {v_update}')
 
     def shed_leaves(self):
         """
