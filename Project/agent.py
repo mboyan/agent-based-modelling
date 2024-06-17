@@ -31,7 +31,7 @@ class Tree(Organism):
         decay = subs_site / (subs_site + fert_site) if subs_site !=0 else 1
     """
 
-    def __init__(self, unique_id, model, pos, disp, leaffall=4, init_volume=1, base_growth_rate=1):
+    def __init__(self, unique_id, model, pos, disp, init_volume=1, leaffall=4, base_growth_rate=1):
         super().__init__(unique_id, model, pos, disp)
 
         self.agent_type = 'Tree'
@@ -79,6 +79,8 @@ class Tree(Organism):
     def shed_leaves(self):
         """
         Shed leaves.
+        TODO
+        - don't scan entire lattice
         """
         # Scan all substrate on lattice
         for x in range(self.model.width):
@@ -98,6 +100,9 @@ class Tree(Organism):
         
             If the volume is above a threshold and if x percent of the surrounding 8 trees are still present
             -> can be harvested with probability p
+            
+        TODO
+        - finish up + remove returns
         """
         harvest_vol_threshold, harvest_percent_threshold, harvest_probability = self.model.harvest_params
 

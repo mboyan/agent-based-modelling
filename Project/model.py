@@ -15,7 +15,6 @@ TODO
     3. top 3-5 fertile sites; plant tree there (human planting strategy)
 - stochastic removal of fungus - either implement or remove from report
 - initialize trees with different volumes
-- function for addition of dead wood: p = V_t / (1 + V_t) (V_t is total volume in neighbourhood)
 """
 
 
@@ -144,6 +143,7 @@ class Forest(Model):
         """
         return np.sqrt((pos1[..., 0] - pos2[..., 0])**2 + (pos1[..., 1] - pos2[..., 1])**2)
 
+
     def getall(self, typeof):
         if not any([ type(i)==typeof for i in self.schedule.agents ]):
             return([])
@@ -187,7 +187,7 @@ class Forest(Model):
 
     def step(self):
         """
-        Method that calls the step method for each of the trees, and then for each of the fungi.
+        Method that calls the step method for trees and fungi in randomized order.
         """
         self.add_substrate()
 
