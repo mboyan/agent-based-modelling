@@ -27,6 +27,7 @@ class Forest(Model):
         self.harvest_params = harvest_params
 
         # Top n sites to plant a tree based on fertility and competition
+        # TO DO: Make this a percentage of lattice sites relative to the grid size
         self.top_n_sites = top_n_sites
 
         # Initialize harvested volume
@@ -220,7 +221,14 @@ class Forest(Model):
 
     def plant_trees_top_r(self):
         # Calculate r_effective for all positions
-        all_positions = [(x, y) for x in range(self.width) for y in range(self.height)]
+        
+        all_positions = []
+        for x in range(self.width):
+            for y in range(self.height):
+                cell_agents = self.grid.get_cell_list_contents(x,y)
+                if len([agent for agent in cell_agents if type(agent) == Tree]) == 0: 
+                    all_positions.append((x,y))
+
         r_effective_values = [(pos, self.calc_r(pos, self.r0_global, self.v_max_global)) for pos in all_positions]
 
         # Sort positions by r_effective
