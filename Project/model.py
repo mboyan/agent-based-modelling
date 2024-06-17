@@ -6,36 +6,27 @@ from mesa.datacollection import DataCollector
 from mesa.time import RandomActivation
 from agent import Tree, Fungus, Organism
 
-"""
-TODO
-- implement global planting strategy (given a harvesting strategy)
-  pick 2 planting, fix harvesting
-    1. simply plant exactly where a tree cut down (remove -> plant (delay?))
-    2. ANR: probabilistic reproduction based on density/fertility (pollen dispersion)
-    3. top 3-5 fertile sites; plant tree there (human planting strategy)
-- stochastic removal of fungus - either implement or remove from report
-- initialize trees with different volumes
-"""
-
-
 class Forest(Model):
-    '''
-    TODO:
-    Things to keep track of:
-    X total volume of existing trees
-    - total volume of harvested trees
-    X number of trees
-    - number of planted trees
-    X number of fungi
-    X number of infected trees
-    '''
-    def __init__(self, width, height, n_init_trees, n_init_fungi, harvest_params, max_substrate=3, max_soil_fertility=3):
+
+    def __init__(self, 
+                 width, 
+                 height, 
+                 n_init_trees, 
+                 n_init_fungi, 
+                 harvest_params, 
+                 max_substrate=3, 
+                 max_soil_fertility=3,
+                 top_n_sites=5):
 
         super().__init__()
 
         self.height = width
         self.width = height
+        self.v_max = 100
         self.harvest_params = harvest_params
+
+        # Top n sites to plant a tree based on fertility and competition
+        self.top_n_sites = top_n_sites
 
         # Initialize harvested volume
         self.harvest_volume = 0
@@ -44,14 +35,15 @@ class Forest(Model):
         self.schedule = RandomActivation(self)
         
         self.grid = MultiGrid(self.width, self.height, torus=True)
-        
+
         # Add initial substrate
         self.grid.add_property_layer(PropertyLayer('substrate', self.width, self.height, 1))
         self.grid.properties['substrate'].data = np.random.randint(0, max_substrate, (self.width, self.height))
 
         # Add initial soil fertility
         self.grid.add_property_layer(PropertyLayer('soil_fertility', self.width, self.height, 1))
-        self.grid.properties['soil_fertility'].data = np.random.uniform(0, max_soil_fertility, (self.width, self.height))
+        self.grid.properties['soil_fertility'].data = np.random.uniform(0, max_soil_fertility,
+                                                                        (self.width, self.height))
 
         self.datacollector = DataCollector(
              {"Trees": lambda m: len(self.getall(Tree)),
@@ -60,7 +52,6 @@ class Forest(Model):
               "Infected Trees": lambda m: sum([agent.infected for agent in self.getall(Tree)]),
               "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
               "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data),
-              "Harvested volume": lambda m: sum([agent.volume for agent in self.getall(Tree)]),
               "Harvested volume": lambda m: m.harvest_volume})
         
         # Initialise populations
@@ -69,7 +60,6 @@ class Forest(Model):
 
         self.running = True
         self.datacollector.collect(self)
-    
 
     def init_population(self, n_agents, agent_type, init_size_range, dispersal_coeff=1):
         """
@@ -89,7 +79,7 @@ class Forest(Model):
             replace = False
         else:
             replace = True
-        
+
         # Random coords sample
         coords_select = coords[np.random.choice(len(coords), n_agents, replace=replace)]
 
@@ -99,12 +89,11 @@ class Forest(Model):
             # params = [coord, np.random.randint(init_size_range[0], init_size_range[1] + 1), dispersal_coeff]
             # self.test_agent(agent_type, params)
 
-    
     def new_agent(self, agent_type, pos, init_size=1, disp=1):
         """
         Method that enables us to add agents of a given type.
         """
-        
+
         # Create a new agent of the given type
         new_agent = agent_type(self.next_id(), self, pos, disp, init_size)
 
@@ -129,7 +118,7 @@ class Forest(Model):
         """
         Method that enables us to remove passed agents.
         """
-        
+
         # Remove agent from grid
         self.grid.remove_agent(agent)
 
@@ -141,17 +130,57 @@ class Forest(Model):
         """
         Method that calculates the Euclidean distance between two points.
         """
-        return np.sqrt((pos1[..., 0] - pos2[..., 0])**2 + (pos1[..., 1] - pos2[..., 1])**2)
+        return np.sqrt((pos1[..., 0] - pos2[..., 0]) ** 2 + (pos1[..., 1] - pos2[..., 1]) ** 2)
+
+    def calc_fert(self, pos, v_self, v_max):
+        """
+        Method that calculates the fertility of the soil at position pos
+        """
+        coord_nbrs = self.grid.get_neighborhood(tuple(pos), moore=True, include_center=False)
+
+        fert_self = min((1,self.grid.properties['soil_fertility'].data[tuple(pos)]))
+        fert_nbrs = sum([min(0.5, self.grid.properties['soil_fertility'].data[tuple(coord)]) for coord in coord_nbrs])
+        f_c = v_self/v_max * (fert_self + fert_nbrs)
+
+        return f_c
+
+    def calc_comp(self, pos, v_self):
+        """
+        Method that calculates the competition of the position pos
+        """
+        nbr_agents = self.grid.get_neighbors(tuple(pos), moore=True, include_center=False)
+
+        vol_self = v_self
+        vol_nbrs = sum([agent.volume for agent in nbr_agents if isinstance(agent, Tree)])
+
+        competition = vol_nbrs / (vol_self + vol_nbrs)
+        return competition
+
+    def calc_r(self, pos, r0, v_max, v_self=1):
+        """
+        Methods calculates the r_effective of the position pos
+        Args:
+            pos (tuple): position of the agent
+            r0 (float): base growth rate
+            v_max (float): maximum volume of a tree
+            v_self (float): volume of the agent
+        """
+
+        f_c = self.calc_fert(pos, v_self, v_max)
+        comp = self.calc_comp(pos, v_self)
+        F = r0 + f_c / (f_c + 10)
+
+        r = r0 + 0.05 * F - 0.1 * comp
+        return r
 
 
     def getall(self, typeof):
-        if not any([ type(i)==typeof for i in self.schedule.agents ]):
-            return([])
+        if not any([type(i) == typeof for i in self.schedule.agents]):
+            return ([])
         else:
-            istype = np.array([ type(i)==typeof for i in self.schedule.agents ])
+            istype = np.array([type(i) == typeof for i in self.schedule.agents])
             ags = np.array(self.schedule.agents)
             return list(ags[istype])
-
 
     def add_substrate(self):
         """
@@ -166,8 +195,8 @@ class Forest(Model):
         lattice_probs = np.zeros((self.width, self.height))
         for tree in self.getall(Tree):
             lattice_tree_dist = self.calc_dist(np.array(tree.pos), coords)
-            lattice_probs += np.exp(-lattice_tree_dist / (tree.volume ** (2/3)))
-        
+            lattice_probs += np.exp(-lattice_tree_dist / (tree.volume ** (2 / 3)))
+
         # Normalize probabilities
         lattice_probs /= np.sum(lattice_probs)
 
@@ -178,12 +207,28 @@ class Forest(Model):
             n_portions = int(np.floor(0.075 * tree.volume))
 
             # Lattice sites to add substrate to
-            coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True, p=lattice_probs.flatten())
+            coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True,
+                                                 p=lattice_probs.flatten())
             coords_select = coords.reshape(-1, 2)[coords_idx_select]
 
             for coord in coords_select:
                 self.grid.properties['substrate'].data[tuple(coord)] += 1
 
+    def plant_trees(self):
+        if self.schedule.steps % 4 == 0:  # Every 4 time steps i.e plantation every year
+            self.plant_trees_top_r()
+
+    def plant_trees_top_r(self):
+        # Calculate r_effective for all positions
+        all_positions = [(x, y) for x in range(self.width) for y in range(self.height)]
+        r_effective_values = [(pos, self.calc_r(pos, self.v_max)) for pos in all_positions]
+
+        # Sort positions by r_effective
+        r_effective_values.sort(key=lambda x: x[1], reverse=True)
+
+        # Plant trees in top n positions
+        for pos, _ in r_effective_values[:self.top_n_sites]:
+            self.new_agent(Tree, pos, init_size=1, disp=1)
 
     def step(self):
         """
@@ -192,10 +237,9 @@ class Forest(Model):
         self.add_substrate()
 
         self.schedule.step()
-
+        self.plant_trees()
         # Save statistics
         self.datacollector.collect(self)
-
 
     def run_model(self, n_steps=100):
         """
@@ -203,4 +247,3 @@ class Forest(Model):
         """
         for i in range(n_steps):
             self.step()
-            
