@@ -56,7 +56,9 @@ class Tree(Organism):
         v_update = v_current * np.exp(r * np.log(self.v_max/self.volume))
 
         self.volume = v_update
-        print(f'Volume: {v_current} -> {v_update}')
+
+        if r < 0:
+            print(f"Warning! Negative growth rate! r={r}")
 
     def shed_leaves(self):
         """

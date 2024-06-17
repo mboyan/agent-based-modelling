@@ -64,7 +64,6 @@ class Forest(Model):
               "Infected Trees": lambda m: sum([agent.infected for agent in self.getall(Tree)]),
               "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
               "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data),
-              "Harvested volume": lambda m: sum([agent.volume for agent in self.getall(Tree)]),
               "Harvested volume": lambda m: m.harvest_volume})
         
         # Initialise populations
