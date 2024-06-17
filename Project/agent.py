@@ -21,7 +21,7 @@ class Tree(Organism):
     A tree agent.
     """
 
-    def __init__(self, unique_id, model, pos, disp, leaffall=4, init_volume=1, base_growth_rate=1.05):
+    def __init__(self, unique_id, model, pos, disp, init_volume=1, base_growth_rate=1.05):
         super().__init__(unique_id, model, pos, disp)
 
         self.agent_type = 'Tree'
@@ -31,7 +31,7 @@ class Tree(Organism):
         self.infected = False
         self.v_max = 100
         self.base_growth_rate = base_growth_rate # Must be at least 1.05 to avoid negative r_effective
-        self.leaffall = leaffall
+        self.leaffall = 4
 
     def grow(self):
         """
@@ -80,7 +80,7 @@ class Tree(Organism):
             if count_trees / 8 > harvest_percent_threshold:
                 # Include a random probability
                 if random.random() < harvest_probability:
-                    self.model.harvest_volume = + self.volume
+                    self.model.harvest_volume += self.volume
                     self.model.remove_agent(self)  # Remove the tree
                     return True
         return False  # Tree is not harvested
@@ -91,7 +91,7 @@ class Tree(Organism):
         """
         self.grow()
 
-        if self.infected and self.schedule.time % self.leaffall == 0:
+        if self.infected and self.model.schedule.time % self.leaffall == 0:
             self.shed_leaves()
 
         self.harvest()
@@ -153,8 +153,11 @@ class Fungus(Organism):
         dist = np.sqrt((x - self.pos[0]) ** 2 + (y - self.pos[1]) ** 2)
         prob = np.exp(-dist / self.disp)
 
+        # print(prob)
+
         # probabilistic infection
         if np.random.random() < prob:
+            # print("Tree infected!")
             tree.infected = True
 
     def sporulate(self):
@@ -177,7 +180,8 @@ class Fungus(Organism):
                 self.infect_wood(cell)
 
         # tree infection
-        trees = self.model.getall(Tree)
+        trees = self.model.getall("Tree")
+        # print(trees)
         for tree in trees:
             if not tree.infected:
                 self.infect_tree(tree)

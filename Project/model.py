@@ -22,7 +22,8 @@ class Forest(Model):
 
         self.height = width
         self.width = height
-        self.v_max = 100
+        self.v_max_global = 100
+        self.r0_global = 1.05
         self.harvest_params = harvest_params
 
         # Top n sites to plant a tree based on fertility and competition
@@ -46,10 +47,10 @@ class Forest(Model):
                                                                         (self.width, self.height))
 
         self.datacollector = DataCollector(
-             {"Trees": lambda m: len(self.getall(Tree)),
-              "Fungi": lambda m: len(self.getall(Fungus)),
-              "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.getall(Tree)]),
-              "Infected Trees": lambda m: sum([agent.infected for agent in self.getall(Tree)]),
+             {"Trees": lambda m: len(self.getall("Tree")),
+              "Fungi": lambda m: len(self.getall("Fungus")),
+              "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.getall("Tree")]),
+              "Infected Trees": lambda m: sum([agent.infected for agent in self.getall("Tree")]),
               "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
               "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data),
               "Harvested volume": lambda m: m.harvest_volume})
@@ -174,10 +175,10 @@ class Forest(Model):
         return r
 
     def getall(self, typeof):
-        if not any([type(i) == typeof for i in self.schedule.agents]):
+        if not any([agent.agent_type == typeof for agent in self.schedule.agents]):
             return ([])
         else:
-            istype = np.array([type(i) == typeof for i in self.schedule.agents])
+            istype = np.array([agent.agent_type == typeof for agent in self.schedule.agents])
             ags = np.array(self.schedule.agents)
             return list(ags[istype])
 
@@ -192,7 +193,7 @@ class Forest(Model):
 
         # Assign probabilities to all lattice sites
         lattice_probs = np.zeros((self.width, self.height))
-        for tree in self.getall(Tree):
+        for tree in self.getall("Tree"):
             lattice_tree_dist = self.calc_dist(np.array(tree.pos), coords)
             lattice_probs += np.exp(-lattice_tree_dist / (tree.volume ** (2 / 3)))
 
@@ -200,7 +201,7 @@ class Forest(Model):
         lattice_probs /= np.sum(lattice_probs)
 
         # Distribute substrate
-        for tree in self.getall(Tree):
+        for tree in self.getall("Tree"):
             # Portion of substrate to add to each lattice site
             # Assumes an average tree volume of 10
             n_portions = int(np.floor(0.075 * tree.volume))
@@ -220,7 +221,7 @@ class Forest(Model):
     def plant_trees_top_r(self):
         # Calculate r_effective for all positions
         all_positions = [(x, y) for x in range(self.width) for y in range(self.height)]
-        r_effective_values = [(pos, self.calc_r(pos, self.v_max)) for pos in all_positions]
+        r_effective_values = [(pos, self.calc_r(pos, self.r0_global, self.v_max_global)) for pos in all_positions]
 
         # Sort positions by r_effective
         r_effective_values.sort(key=lambda x: x[1], reverse=True)
