@@ -12,7 +12,7 @@ Analysis stuff
 
 def agent_portrayal(agent):
     size = 5
-    color = "tab:blue"
+    color = "black"
     alpha = 1
     if agent.agent_type == "Fungus":
         size = 4
@@ -20,7 +20,10 @@ def agent_portrayal(agent):
         alpha = agent.energy / 4
     if agent.agent_type == "Tree":
         size = agent.volume
-        color = "tab:green"
+        if agent.infected:
+            color = "tab:olive"
+        else:
+            color = "tab:green"
         alpha = 1
     return {"size": size, "color": color, "alpha": alpha}
 

@@ -45,6 +45,7 @@ class Forest(Model):
 
         # Create schedule
         self.schedule = RandomActivation(self)
+        
         self.grid = MultiGrid(self.width, self.height, torus=True)
 
         # Add initial substrate
@@ -57,15 +58,15 @@ class Forest(Model):
                                                                         (self.width, self.height))
 
         self.datacollector = DataCollector(
-            {"Trees": lambda m: len(self.getall(Tree)),
-             "Fungi": lambda m: len(self.getall(Fungus)),
-             "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.getall(Tree)]),
-             "Infected Trees": lambda m: sum([agent.infected for agent in self.getall(Tree)]),
-             "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
-             "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data),
-             "Harvested volume": lambda m: sum([agent.volume for agent in self.getall(Tree)]),
-             "Harvested volume": lambda m: m.harvest_volume})
-
+             {"Trees": lambda m: len(self.getall(Tree)),
+              "Fungi": lambda m: len(self.getall(Fungus)),
+              "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.getall(Tree)]),
+              "Infected Trees": lambda m: sum([agent.infected for agent in self.getall(Tree)]),
+              "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
+              "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data),
+              "Harvested volume": lambda m: sum([agent.volume for agent in self.getall(Tree)]),
+              "Harvested volume": lambda m: m.harvest_volume})
+        
         # Initialise populations
         self.init_population(n_init_trees, Tree, (5, 30), 4)
         self.init_population(n_init_fungi, Fungus, (1, 3), 1)
@@ -97,8 +98,7 @@ class Forest(Model):
 
         # Add agents to the grid
         for coord in coords_select:
-            self.new_agent(agent_type, coord, np.random.randint(init_size_range[0], init_size_range[1] + 1),
-                           dispersal_coeff)
+            self.new_agent(agent_type, coord, np.random.randint(init_size_range[0], init_size_range[1] + 1), dispersal_coeff)
             # params = [coord, np.random.randint(init_size_range[0], init_size_range[1] + 1), dispersal_coeff]
             # self.test_agent(agent_type, params)
 
@@ -108,11 +108,12 @@ class Forest(Model):
         """
 
         # Create a new agent of the given type
-        new_agent = agent_type(self.next_id(), self, pos, init_size, disp)
+        new_agent = agent_type(self.next_id(), self, pos, disp, init_size)
 
         # Add agent to schedule
         self.schedule.add(new_agent)
-
+    
+    
     # def test_agent(self, agent_type, pos, init_size=1, disp=1):
     #     '''
     #     Generalized agent addition function trial.
@@ -122,9 +123,10 @@ class Forest(Model):
     #         # [print(f'{agent_type} {type(param)}') for param in params]
     #     # agent = agent_type(self.next_id(), self, *params)
     #     new_agent = agent_type(self.next_id(), self, pos, init_size, disp)
-
+        
     #     self.schedule.add(new_agent)
-
+    
+    
     def remove_agent(self, agent):
         """
         Method that enables us to remove passed agents.
@@ -135,6 +137,7 @@ class Forest(Model):
 
         # Remove agent from schedule
         self.schedule.remove(agent)
+    
 
     def calc_dist(self, pos1, pos2):
         """
@@ -186,6 +189,14 @@ class Forest(Model):
             istype = np.array([type(i) == typeof for i in self.schedule.agents])
             ags = np.array(self.schedule.agents)
             return list(ags[istype])
+    def getall(self, typeof):
+        if not any([ type(i)==typeof for i in self.schedule.agents ]):
+            return([])
+        else:
+            istype = np.array([ type(i)==typeof for i in self.schedule.agents ])
+            ags = np.array(self.schedule.agents)
+            return list(ags[istype])
+
 
     def add_substrate(self):
         """

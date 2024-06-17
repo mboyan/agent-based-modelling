@@ -20,7 +20,6 @@ class Tree(Organism):
     """
     A tree agent.
     TODO
-    - leaffall constant?
     - embed shed_leaves from agent.py + update to not scan entire lattice
     - add/define tree growth + consume fertility (from entire Moore neighborhood (+?))
     - define harvesting in die function
@@ -33,7 +32,7 @@ class Tree(Organism):
         decay = subs_site / (subs_site + fert_site) if subs_site !=0 else 1
     """
 
-    def __init__(self, unique_id, model, pos, disp, init_volume=1, base_growth_rate=1):
+    def __init__(self, unique_id, model, pos, disp, leaffall=4, init_volume=1, base_growth_rate=1):
         super().__init__(unique_id, model, pos, disp)
 
         self.agent_type = 'Tree'
@@ -43,6 +42,7 @@ class Tree(Organism):
         self.infected = False
         self.v_max = 100
         self.base_growth_rate = base_growth_rate
+        self.leaffall = leaffall
 
     def grow(self):
         """
@@ -102,7 +102,7 @@ class Tree(Organism):
         """
         self.grow()
 
-        if self.infected:
+        if self.infected and self.schedule.time % self.leaffall == 0:
             self.shed_leaves()
 
         self.harvest()
