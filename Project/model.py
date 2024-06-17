@@ -30,11 +30,6 @@ class Forest(Model):
     X number of fungi
     X number of infected trees
     '''
-<<<<<<< HEAD
-
-    def __init__(self, width, height, n_init_trees, n_init_fungi, harvest_params, max_substrate=3,
-                 max_soil_fertility=3):
-=======
     def __init__(self, 
                  width, 
                  height, 
@@ -44,12 +39,12 @@ class Forest(Model):
                  max_substrate=3, 
                  max_soil_fertility=3,
                  top_n_sites=5):
->>>>>>> b150aff (start tree planting)
 
         super().__init__()
 
         self.height = width
         self.width = height
+        self.v_max = 100
         self.harvest_params = harvest_params
 
         # Top n sites to plant a tree based on fertility and competition
@@ -204,14 +199,6 @@ class Forest(Model):
             istype = np.array([type(i) == typeof for i in self.schedule.agents])
             ags = np.array(self.schedule.agents)
             return list(ags[istype])
-    def getall(self, typeof):
-        if not any([ type(i)==typeof for i in self.schedule.agents ]):
-            return([])
-        else:
-            istype = np.array([ type(i)==typeof for i in self.schedule.agents ])
-            ags = np.array(self.schedule.agents)
-            return list(ags[istype])
-
 
     def add_substrate(self):
         """
@@ -245,6 +232,22 @@ class Forest(Model):
             for coord in coords_select:
                 self.grid.properties['substrate'].data[tuple(coord)] += 1
 
+    def plant_trees(self):
+        if self.schedule.steps % 4 == 0:  # Every 4 time steps i.e plantation every year
+            self.plant_trees_top_r()
+
+    def plant_trees_top_r(self):
+        # Calculate r_effective for all positions
+        all_positions = [(x, y) for x in range(self.width) for y in range(self.height)]
+        r_effective_values = [(pos, self.calc_r(pos, self.v_max)) for pos in all_positions]
+
+        # Sort positions by r_effective
+        r_effective_values.sort(key=lambda x: x[1], reverse=True)
+
+        # Plant trees in top n positions
+        for pos, _ in r_effective_values[:self.top_n_sites]:
+            self.new_agent(Tree, pos, init_size=1, disp=1)
+
     def step(self):
         """
         Method that calls the step method for each of the trees, and then for each of the fungi.
@@ -252,7 +255,7 @@ class Forest(Model):
         self.add_substrate()
 
         self.schedule.step()
-
+        self.plant_trees()
         # Save statistics
         self.datacollector.collect(self)
 
