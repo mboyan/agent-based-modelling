@@ -6,30 +6,8 @@ from mesa.datacollection import DataCollector
 from mesa.time import RandomActivation
 from agent import Tree, Fungus, Organism
 
-"""
-TODO
-- implement global planting strategy (given a harvesting strategy)
-  pick 2 planting, fix harvesting
-    1. simply plant exactly where a tree cut down (remove -> plant (delay?))
-    2. ANR: probabilistic reproduction based on density/fertility (pollen dispersion)
-    3. top 3-5 fertile sites; plant tree there (human planting strategy)
-- stochastic removal of fungus - either implement or remove from report
-- initialize trees with different volumes
-- function for addition of dead wood: p = V_t / (1 + V_t) (V_t is total volume in neighbourhood)
-"""
-
-
 class Forest(Model):
-    '''
-    TODO:
-    Things to keep track of:
-    X total volume of existing trees
-    - total volume of harvested trees
-    X number of trees
-    - number of planted trees
-    X number of fungi
-    X number of infected trees
-    '''
+
     def __init__(self, 
                  width, 
                  height, 
@@ -74,7 +52,6 @@ class Forest(Model):
               "Infected Trees": lambda m: sum([agent.infected for agent in self.getall(Tree)]),
               "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
               "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data),
-              "Harvested volume": lambda m: sum([agent.volume for agent in self.getall(Tree)]),
               "Harvested volume": lambda m: m.harvest_volume})
         
         # Initialise populations
