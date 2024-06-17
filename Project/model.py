@@ -107,7 +107,7 @@ class Forest(Model):
         """
         
         # Create a new agent of the given type
-        new_agent = agent_type(self.next_id(), self, pos, init_size, disp)
+        new_agent = agent_type(self.next_id(), self, pos, disp, init_size)
 
         # Add agent to schedule
         self.schedule.add(new_agent)
