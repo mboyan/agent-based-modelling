@@ -19,17 +19,6 @@ class Organism(Agent):
 class Tree(Organism):
     """
     A tree agent.
-    TODO
-    - embed shed_leaves from agent.py + update to not scan entire lattice
-    - add/define tree growth + consume fertility (from entire Moore neighborhood (+?))
-    - define harvesting in die function
-    - different initialization volumes
-
-    NOTES:
-    code for calculating decay:
-        subs_site = self.model.grid.properties['substrate'].data[x, y]
-        fert_site = self.model.grid.properties['soil_fertility'].data[x, y]
-        decay = subs_site / (subs_site + fert_site) if subs_site !=0 else 1
     """
 
     def __init__(self, unique_id, model, pos, disp, leaffall=4, init_volume=1, base_growth_rate=1.05):
@@ -47,8 +36,6 @@ class Tree(Organism):
     def grow(self):
         """
         Grow the tree.
-        TODO:
-        - find correct way to represent root system / inlcusion of neighbour fertility
         """
 
         v_current = self.volume
@@ -77,9 +64,8 @@ class Tree(Organism):
 
     def harvest(self):
         """
-        How a tree 'harvests itself':
-
-            If the volume is above a threshold and if x percent of the surrounding 8 trees are still present
+        A tree 'harvests itself' if:
+        If the volume is above a threshold and if x percent of the surrounding 8 trees are still present
             -> can be harvested with probability p
         """
         harvest_vol_threshold, harvest_percent_threshold, harvest_probability = self.model.harvest_params
