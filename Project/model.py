@@ -14,6 +14,7 @@ class Forest(Model):
                  n_init_trees, 
                  n_init_fungi, 
                  harvest_params, 
+                 fert_comp_ratio,
                  max_substrate=3, 
                  max_soil_fertility=3,
                  top_n_sites=5):
@@ -22,9 +23,10 @@ class Forest(Model):
 
         self.height = width
         self.width = height
-        self.v_max_global = 100
-        self.r0_global = 1.05
+        self.v_max_global = 100 
+        #self.r0_global = 1.05 # guess this isn't needed anymore
         self.harvest_params = harvest_params
+        self.fert_comp_ratio = fert_comp_ratio
 
         # Top n sites to plant a tree based on fertility and competition
         # TO DO: Make this a percentage of lattice sites relative to the grid size
@@ -180,7 +182,8 @@ class Forest(Model):
         competition = vol_nbrs / (vol_self + vol_nbrs)
         return competition
 
-    def calc_r(self, pos, r0, v_max, grow=True, v_self=1):
+    #def calc_r(self, pos, r0, v_max, grow=True, v_self=1):
+    def calc_r(self, pos, v_max, grow=True, v_self=1):
         """
         Methods calculates the r_effective of the position pos
         Args:
@@ -190,12 +193,14 @@ class Forest(Model):
             v_self (float): volume of the agent
         """
 
+        beta = 0.1
+        alpha = self.fert_comp_ratio * beta
+
         f_c = self.calc_fert(pos, v_self, v_max, grow)
         comp = self.calc_comp(pos, v_self)
-        F = r0 + f_c / (f_c + 10)
+        F = f_c / (f_c + 10)
 
-        r = r0 + 0.05 * F - 0.1 * comp
-
+        r = beta + alpha * F - beta * comp 
         return r
 
 
@@ -253,7 +258,7 @@ class Forest(Model):
 
         random.shuffle(all_positions)
 
-        r_effective_values = [(pos, self.calc_r(pos, self.r0_global, self.v_max_global, grow=False)) 
+        r_effective_values = [(pos, self.calc_r(pos, self.v_max_global, grow=False)) 
                               for pos in all_positions]
 
         # Sort positions by r_effective

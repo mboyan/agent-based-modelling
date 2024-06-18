@@ -21,7 +21,7 @@ class Tree(Organism):
     A tree agent.
     """
 
-    def __init__(self, unique_id, model, pos, disp, init_volume=1, base_growth_rate=1.05):
+    def __init__(self, unique_id, model, pos, disp, init_volume=1):
         super().__init__(unique_id, model, pos, disp)
 
         self.agent_type = 'Tree'
@@ -29,7 +29,6 @@ class Tree(Organism):
         self.dispersal_coeff = 4
         self.infected = False
         self.v_max = 100
-        self.base_growth_rate = base_growth_rate # Must be at least 1.05 to avoid negative r_effective
         self.leaffall = 4
 
     def grow(self):
@@ -38,8 +37,9 @@ class Tree(Organism):
         """
 
         v_current = self.volume
-        r = self.model.calc_r(self.pos, self.base_growth_rate, self.v_max, True, self.volume)
+        r = self.model.calc_r(self.pos, self.v_max, True, self.volume)
         v_update = v_current * np.exp(r*(1-v_current/350)**4)
+
         self.volume = v_update
 
     def shed_leaves(self):
