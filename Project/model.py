@@ -117,6 +117,14 @@ class Forest(Model):
         
     #     self.schedule.add(new_agent)
     
+    def find_agent(self, agent):
+        # This method should return the position of the agent or None if the agent is not found
+        for x in range(self.width):
+            for y in range(self.height):
+                if agent in self.grid[x][y]:
+                    return (x, y)
+        return None
+    
     
     def remove_agent(self, agent):
         """
@@ -128,6 +136,7 @@ class Forest(Model):
 
         # Remove agent from schedule
         self.schedule.remove(agent)
+
     
 
     def calc_dist(self, pos1, pos2):

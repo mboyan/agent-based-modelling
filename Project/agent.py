@@ -197,6 +197,17 @@ class Fungus(Organism):
         """
         self.model.remove_agent(self)
 
+
+    def stochastic_removal(self):
+        ''' Stochastic removal of fungi: assuming they live on average for 5 years (=20 timesteps = 20*3 months)
+         and the probability of them dying during 5 years is 0.9 = 1−(prob not dying)^20
+        -> then per timestep the probability of stochastic removal is approx 0.1'''
+        if np.random.random() < 0.1:
+           self.model.remove_agent(self)
+    
+
+    
+
     def step(self):
         """
         Fungus self-development step.
@@ -205,5 +216,10 @@ class Fungus(Organism):
 
         if self.energy > 4:
             self.sporulate()
+            self.stochastic_removal()
         elif self.energy < 1:
             self.die()
+        else:
+            self.stochastic_removal()
+        
+        
