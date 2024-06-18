@@ -25,7 +25,6 @@ class Tree(Organism):
         super().__init__(unique_id, model, pos, disp)
 
         self.agent_type = 'Tree'
-
         self.volume = init_volume
         self.dispersal_coeff = 4
         self.infected = False
@@ -40,12 +39,8 @@ class Tree(Organism):
 
         v_current = self.volume
         r = self.model.calc_r(self.pos, self.base_growth_rate, self.v_max, True, self.volume)
-        v_update = v_current * np.exp(r * np.log(self.v_max/self.volume))
-
+        v_update = v_current * np.exp(r*(1-v_current/350)**4)
         self.volume = v_update
-
-        if r < 0:
-            print(f"Warning! Negative growth rate! r={r}")
 
     def shed_leaves(self):
         """
