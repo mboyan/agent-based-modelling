@@ -243,6 +243,8 @@ class Forest(Model):
                 if len([agent for agent in cell_agents if type(agent) == Tree]) == 0: 
                     all_positions.append((x,y))
 
+        random.shuffle(all_positions)
+
         r_effective_values = [(pos, self.calc_r(pos, self.r0_global, self.v_max_global, grow=False)) 
                               for pos in all_positions]
 
