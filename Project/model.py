@@ -117,6 +117,14 @@ class Forest(Model):
         
     #     self.schedule.add(new_agent)
     
+    def find_agent(self, agent):
+        # This method should return the position of the agent or None if the agent is not found
+        for x in range(self.width):
+            for y in range(self.height):
+                if agent in self.grid[x][y]:
+                    return (x, y)
+        return None
+    
     
     def remove_agent(self, agent):
         """
@@ -128,6 +136,7 @@ class Forest(Model):
 
         # Remove agent from schedule
         self.schedule.remove(agent)
+
     
 
     def calc_dist(self, pos1, pos2):
@@ -147,8 +156,8 @@ class Forest(Model):
         # fert_nbrs_sum = sum(fert_nbrs)
         # f_c = v_self/v_max * (fert_self + fert_nbrs_sum)
 
-        fert_self = min((v_self/v_max*5,self.grid.properties['soil_fertility'].data[tuple(pos)]))
-        fert_nbrs = [min(v_self/v_max*2.5, self.grid.properties['soil_fertility'].data[tuple(coord)]) for coord in coord_nbrs]
+        fert_self = min((v_self/v_max*2,self.grid.properties['soil_fertility'].data[tuple(pos)]))
+        fert_nbrs = [min(v_self/v_max*1, self.grid.properties['soil_fertility'].data[tuple(coord)]) for coord in coord_nbrs]
         fert_nbrs_sum = sum(fert_nbrs)
         f_c = (fert_self + fert_nbrs_sum)
 
@@ -186,6 +195,7 @@ class Forest(Model):
         F = r0 + f_c / (f_c + 10)
 
         r = r0 + 0.05 * F - 0.1 * comp
+
         return r
 
 
@@ -262,7 +272,6 @@ class Forest(Model):
         self.harvest_volume = 0
 
         self.add_substrate()
-
         self.schedule.step()
         self.plant_trees()
         # Save statistics
