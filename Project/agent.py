@@ -5,20 +5,22 @@ import random
 
 class Organism(Agent):
     """
-    General class for all organisms in the model.
+    General class for shared attributes in all organisms of the model.
     """
 
     def __init__(self, unique_id, model, pos, disp):
         super().__init__(unique_id, model)
 
         self.disp = disp
-        self.model.grid.place_agent(self, pos)
         self.pos = pos
+        self.model.grid.place_agent(self, pos)
 
 
 class Tree(Organism):
     """
-    A tree agent.
+    Tree agent:
+    A tree can become infected with viaphytic fungus and spread infection through leaf drop.
+    Each timestep, the tree grows and is possibly harvested.
     """
 
     def __init__(self, unique_id, model, pos, disp, init_volume=1, base_growth_rate=1.05):
@@ -32,10 +34,11 @@ class Tree(Organism):
         self.v_max = 100
         self.base_growth_rate = base_growth_rate # Must be at least 1.05 to avoid negative r_effective
         self.leaffall = 4
+        self.inf_loss = 0.05
 
     def grow(self):
         """
-        Grow the tree.
+        Calculate tree growth for next timestep. 
         """
 
         v_current = self.volume
@@ -47,64 +50,63 @@ class Tree(Organism):
         if r < 0:
             print(f"Warning! Negative growth rate! r={r}")
 
+
     def shed_leaves(self):
+        """     
+        Infected trees stochastically drop leaves on the grid
+        and inoculate substrate on the forest floor.
         """
-        Shed leaves.
-        TODO
-        - don't scan entire lattice
-        """
-        # Scan all substrate on lattice
         for x in range(self.model.width):
             for y in range(self.model.height):
+                # check for substrate on grid point
                 if self.model.grid.properties['substrate'].data[x, y] > 0:
-
+                    # inoculate substrate based on distance from tree
                     dist = np.sqrt((x - self.pos[0]) ** 2 + (y - self.pos[1]) ** 2)
-
-                    # Inoculate substrate
                     if np.random.random() < np.exp(-dist / self.dispersal_coeff):
                         self.model.new_agent(Fungus, (x, y))
 
+
     def harvest(self):
         """
-        A tree 'harvests itself' if:
-        If the volume is above a threshold and if x percent of the surrounding 8 trees are still present
-            -> can be harvested with probability p
-            
-        TODO
-        - finish up + remove returns
+        Trees are stochastically harvested once they reach 
+        a threshold volume and number of neighbors.
         """
         harvest_vol_threshold, harvest_percent_threshold, harvest_probability = self.model.harvest_params
 
-        # Check volume threshold
+        # volume threshold
         if self.volume > harvest_vol_threshold:
-
-            # Check percentage of surrounding trees threshold
+            # calculate number of neighbouring trees
             neighbouring_agents = self.model.grid.get_neighbors(tuple(self.pos), moore=True, include_center=False)
             count_trees = len([agent for agent in neighbouring_agents if agent.agent_type == "Tree"])
-
+            # neighbour threshold
             if count_trees / 8 > harvest_percent_threshold:
-                # Include a random probability
+                # remove tree stochastically
                 if random.random() < harvest_probability:
                     self.model.harvest_volume += self.volume
-                    self.model.remove_agent(self)  # Remove the tree
-                    return True
-        return False  # Tree is not harvested
+                    self.model.remove_agent(self)  
+    
 
     def step(self):
         """
-        Tree development step.
+        Step function for tree.
         """
+        if self.infected:
+            # leaffall once a year
+            if self.model.schedule.time % self.leaffall == 0:
+                self.shed_leaves()
+            # stochastic loss of infection
+            if random.random() < self.inf_loss:
+                self.infected = False
+
         self.grow()
-
-        if self.infected and self.model.schedule.time % self.leaffall == 0:
-            self.shed_leaves()
-
         self.harvest()
 
 
 class Fungus(Organism):
     """
-    A fungus agent.
+    Fungus agent:
+    Fungi consume substrate and convert it into soil fertility.
+    They sporulate once a year and can infect trees and substrate in the process.
     """
 
     def __init__(self, unique_id, model, pos, disp, init_energy=1):
@@ -115,18 +117,18 @@ class Fungus(Organism):
 
     def consume(self):
         """
-        Consume substrate.
+        Consume substrate and convert into soil fertility.
         """
         x, y = self.pos
         substrate = self.model.grid.properties['substrate'].data[x, y]
         fertility = self.model.grid.properties['soil_fertility'].data[x, y]
 
-        # eat wood + deposit fertility
         if substrate > 0:
-            # self.model.grid.properties['substrate'].set_cell((x, y), max(0, substrate - 1))
+            # eat wood
             self.model.grid.properties['substrate'].set_cell((x, y), substrate - 1)
-            self.model.grid.properties['soil_fertility'].set_cell((x, y), fertility + 1)
             self.energy += 1
+            # deposit fertility
+            self.model.grid.properties['soil_fertility'].set_cell((x, y), fertility + 1)
         # consume reserve if no wood
         else:
             self.energy -= 1
@@ -147,8 +149,8 @@ class Fungus(Organism):
 
         # probabilistic infection
         if np.random.random() < prob:
-            # self.model.new_agent(Fungus, (x, y))
             self.model.new_agent(Fungus, (x, y))
+
 
     def infect_tree(self, tree):
         '''
@@ -158,12 +160,10 @@ class Fungus(Organism):
         dist = np.sqrt((x - self.pos[0]) ** 2 + (y - self.pos[1]) ** 2)
         prob = np.exp(-dist / self.disp)
 
-        # print(prob)
-
         # probabilistic infection
         if np.random.random() < prob:
-            # print("Tree infected!")
             tree.infected = True
+
 
     def sporulate(self):
         """
@@ -174,7 +174,7 @@ class Fungus(Organism):
         # substrate infection
         substrate_layer = self.model.grid.properties['substrate']
 
-        # select cells that have substrate
+        # filter cells for substrate
         def has_substrate(cell_value):
             return cell_value > 0
 
@@ -186,7 +186,6 @@ class Fungus(Organism):
 
         # tree infection
         trees = self.model.getall("Tree")
-        # print(trees)
         for tree in trees:
             if not tree.infected:
                 self.infect_tree(tree)
@@ -196,6 +195,7 @@ class Fungus(Organism):
         Die if no energy or killed through environment
         """
         self.model.remove_agent(self)
+
 
     def step(self):
         """

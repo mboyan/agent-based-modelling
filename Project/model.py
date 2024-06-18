@@ -145,8 +145,8 @@ class Forest(Model):
         # fert_nbrs_sum = sum(fert_nbrs)
         # f_c = v_self/v_max * (fert_self + fert_nbrs_sum)
 
-        fert_self = min((v_self/v_max*5,self.grid.properties['soil_fertility'].data[tuple(pos)]))
-        fert_nbrs = [min(v_self/v_max*2.5, self.grid.properties['soil_fertility'].data[tuple(coord)]) for coord in coord_nbrs]
+        fert_self = min((v_self/v_max*2,self.grid.properties['soil_fertility'].data[tuple(pos)]))
+        fert_nbrs = [min(v_self/v_max*1, self.grid.properties['soil_fertility'].data[tuple(coord)]) for coord in coord_nbrs]
         fert_nbrs_sum = sum(fert_nbrs)
         f_c = (fert_self + fert_nbrs_sum)
 
