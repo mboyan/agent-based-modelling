@@ -188,6 +188,7 @@ class Forest(Model):
         r = r0 + 0.05 * F - 0.1 * comp
         return r
 
+
     def getall(self, typeof):
         if not any([agent.agent_type == typeof for agent in self.schedule.agents]):
             return ([])
@@ -254,7 +255,7 @@ class Forest(Model):
 
     def step(self):
         """
-        Method that calls the step method for each of the trees, and then for each of the fungi.
+        Method that calls the step method for trees and fungi in randomized order.
         """
 
         # Zero harvest volume

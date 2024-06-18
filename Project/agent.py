@@ -50,6 +50,8 @@ class Tree(Organism):
     def shed_leaves(self):
         """
         Shed leaves.
+        TODO
+        - don't scan entire lattice
         """
         # Scan all substrate on lattice
         for x in range(self.model.width):
@@ -67,6 +69,9 @@ class Tree(Organism):
         A tree 'harvests itself' if:
         If the volume is above a threshold and if x percent of the surrounding 8 trees are still present
             -> can be harvested with probability p
+            
+        TODO
+        - finish up + remove returns
         """
         harvest_vol_threshold, harvest_percent_threshold, harvest_probability = self.model.harvest_params
 
