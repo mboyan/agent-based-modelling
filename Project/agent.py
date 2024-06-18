@@ -25,7 +25,7 @@ class Tree(Organism):
         super().__init__(unique_id, model, pos, disp)
 
         self.agent_type = 'Tree'
-
+        self.model = model
         self.volume = init_volume
         self.dispersal_coeff = 4
         self.infected = False

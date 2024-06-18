@@ -219,8 +219,17 @@ class Forest(Model):
             self.plant_trees_top_r()
 
     def plant_trees_top_r(self):
-        # Calculate r_effective for all positions
-        all_positions = [(x, y) for x in range(self.width) for y in range(self.height)]
+        # Calculate r_effective for all positions without trees
+        all_positions = []
+        for x in range(self.width):
+            for y in range(self.height):
+                cell_agents = self.grid.get_cell_list_contents(x,y)
+                if len(cell_agents) == 0:
+                    all_positions.append((x,y))
+                elif len([agent for agent in contents if type(agent) == Tree]) == 0: 
+                    all_positions.append((x,y))
+                    
+        # all_positions = [(x, y) for x in range(self.width) for y in range(self.height)]
         r_effective_values = [(pos, self.calc_r(pos, self.v_max)) for pos in all_positions]
 
         # Sort positions by r_effective
