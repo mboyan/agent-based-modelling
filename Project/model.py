@@ -53,7 +53,9 @@ class Forest(Model):
               "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.getall("Tree")]),
               "Infected Trees": lambda m: sum([agent.infected for agent in self.getall("Tree")]),
               "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
+              "Substrate Variance": lambda m: np.var(self.grid.properties['substrate'].data),
               "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data),
+              "Soil Fertility Variance": lambda m: np.var(self.grid.properties['soil_fertility'].data),
               "Harvested volume": lambda m: m.harvest_volume})
         
         # Initialise populations
@@ -115,6 +117,14 @@ class Forest(Model):
         
     #     self.schedule.add(new_agent)
     
+    def find_agent(self, agent):
+        # This method should return the position of the agent or None if the agent is not found
+        for x in range(self.width):
+            for y in range(self.height):
+                if agent in self.grid[x][y]:
+                    return (x, y)
+        return None
+    
     
     def remove_agent(self, agent):
         """
@@ -126,6 +136,7 @@ class Forest(Model):
 
         # Remove agent from schedule
         self.schedule.remove(agent)
+
     
 
     def calc_dist(self, pos1, pos2):
@@ -187,6 +198,7 @@ class Forest(Model):
 
         return r
 
+
     def getall(self, typeof):
         if not any([agent.agent_type == typeof for agent in self.schedule.agents]):
             return ([])
@@ -208,7 +220,7 @@ class Forest(Model):
         lattice_probs = np.zeros((self.width, self.height))
         for tree in self.getall("Tree"):
             lattice_tree_dist = self.calc_dist(np.array(tree.pos), coords)
-            lattice_probs += np.exp(-lattice_tree_dist / (tree.volume ** (2 / 3)))
+            lattice_probs += np.exp(-lattice_tree_dist / (tree.volume ** (1 / 3)))
 
         # Normalize probabilities
         lattice_probs /= np.sum(lattice_probs)
@@ -241,6 +253,8 @@ class Forest(Model):
                 if len([agent for agent in cell_agents if type(agent) == Tree]) == 0: 
                     all_positions.append((x,y))
 
+        random.shuffle(all_positions)
+
         r_effective_values = [(pos, self.calc_r(pos, self.r0_global, self.v_max_global, grow=False)) 
                               for pos in all_positions]
 
@@ -253,8 +267,12 @@ class Forest(Model):
 
     def step(self):
         """
-        Method that calls the step method for each of the trees, and then for each of the fungi.
+        Method that calls the step method for trees and fungi in randomized order.
         """
+
+        # Zero harvest volume
+        self.harvest_volume = 0
+
         self.add_substrate()
         self.schedule.step()
         self.plant_trees()
