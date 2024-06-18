@@ -193,9 +193,7 @@ class Forest(Model):
         if not any([agent.agent_type == typeof for agent in self.schedule.agents]):
             return ([])
         else:
-            istype = np.array([agent.agent_type == typeof for agent in self.schedule.agents])
-            ags = np.array(self.schedule.agents)
-            return list(ags[istype])
+            return [agent for agent in self.schedule.agents if agent.agent_type == typeof]
 
     def add_substrate(self):
         """
@@ -240,7 +238,7 @@ class Forest(Model):
         for x in range(self.width):
             for y in range(self.height):
                 cell_agents = self.grid.get_cell_list_contents([x,y])
-                if len([agent for agent in cell_agents if type(agent) == Tree]) == 0: 
+                if not any(isinstance(agent, Tree) for agent in cell_agents):
                     all_positions.append((x,y))
 
         random.shuffle(all_positions)

@@ -80,7 +80,7 @@ class Tree(Organism):
 
             # Check percentage of surrounding trees threshold
             neighbouring_agents = self.model.grid.get_neighbors(tuple(self.pos), moore=True, include_center=False)
-            count_trees = len([agent for agent in neighbouring_agents if agent.agent_type == "Tree"])
+            count_trees = sum(agent.agent_type == "Tree" for agent in neighbouring_agents)
 
             if count_trees / 8 > harvest_percent_threshold:
                 # Include a random probability
@@ -140,7 +140,7 @@ class Fungus(Organism):
 
         # count fungi in cell to scale probability with space competition
         contents = self.model.grid.get_cell_list_contents(cell)
-        fun_count = len([agent for agent in contents if type(agent) == Fungus])
+        fun_count = sum(1 for agent in contents if isinstance(agent, Fungus))
 
         # inoculation probability
         prob = 1 / (fun_count + 1) * np.exp(-dist / self.disp)
