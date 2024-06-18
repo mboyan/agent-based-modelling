@@ -23,16 +23,14 @@ class Tree(Organism):
     Each timestep, the tree grows and is possibly harvested.
     """
 
-    def __init__(self, unique_id, model, pos, disp, init_volume=1, base_growth_rate=1.05):
+    def __init__(self, unique_id, model, pos, disp, init_volume=1):
         super().__init__(unique_id, model, pos, disp)
 
         self.agent_type = 'Tree'
-        self.model = model
         self.volume = init_volume
         self.dispersal_coeff = 4
         self.infected = False
         self.v_max = 100
-        self.base_growth_rate = base_growth_rate # Must be at least 1.05 to avoid negative r_effective
         self.leaffall = 4
         self.inf_loss = 0.05
 
@@ -42,14 +40,10 @@ class Tree(Organism):
         """
 
         v_current = self.volume
-        r = self.model.calc_r(self.pos, self.base_growth_rate, self.v_max, True, self.volume)
-        v_update = v_current * np.exp(r * np.log(self.v_max/self.volume))
+        r = self.model.calc_r(self.pos, self.v_max, True, self.volume)
+        v_update = v_current * np.exp(r*(1-v_current/350)**4)
 
         self.volume = v_update
-
-        if r < 0:
-            print(f"Warning! Negative growth rate! r={r}")
-
 
     def shed_leaves(self):
         """     
@@ -77,8 +71,8 @@ class Tree(Organism):
         if self.volume > harvest_vol_threshold:
             # calculate number of neighbouring trees
             neighbouring_agents = self.model.grid.get_neighbors(tuple(self.pos), moore=True, include_center=False)
-            count_trees = len([agent for agent in neighbouring_agents if agent.agent_type == "Tree"])
-            # neighbour threshold
+            count_trees = sum(agent.agent_type == "Tree" for agent in neighbouring_agents)
+
             if count_trees / 8 > harvest_percent_threshold:
                 # remove tree stochastically
                 if random.random() < harvest_probability:
@@ -142,7 +136,7 @@ class Fungus(Organism):
 
         # count fungi in cell to scale probability with space competition
         contents = self.model.grid.get_cell_list_contents(cell)
-        fun_count = len([agent for agent in contents if type(agent) == Fungus])
+        fun_count = sum(1 for agent in contents if isinstance(agent, Fungus))
 
         # inoculation probability
         prob = 1 / (fun_count + 1) * np.exp(-dist / self.disp)
@@ -197,6 +191,15 @@ class Fungus(Organism):
         self.model.remove_agent(self)
 
 
+    def stochastic_removal(self):
+        ''' 
+        Stochastic removal of fungi: assuming they live on average for 5 years (=20 timesteps = 20*3 months)
+         and the probability of them dying during 5 years is 0.9 = 1−(prob not dying)^20
+        -> then per timestep the probability of stochastic removal is approx 0.1'''
+        if np.random.random() < 0.1:
+           self.model.remove_agent(self)
+    
+
     def step(self):
         """
         Fungus self-development step.
@@ -207,3 +210,8 @@ class Fungus(Organism):
             self.sporulate()
         elif self.energy < 1:
             self.die()
+            return 
+        
+        self.stochastic_removal()
+        
+        
