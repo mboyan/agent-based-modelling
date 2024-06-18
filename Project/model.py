@@ -53,7 +53,9 @@ class Forest(Model):
               "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.getall("Tree")]),
               "Infected Trees": lambda m: sum([agent.infected for agent in self.getall("Tree")]),
               "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
+              "Substrate Variance": lambda m: np.var(self.grid.properties['substrate'].data),
               "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data),
+              "Soil Fertility Variance": lambda m: np.var(self.grid.properties['soil_fertility'].data),
               "Harvested volume": lambda m: m.harvest_volume})
         
         # Initialise populations
@@ -207,7 +209,7 @@ class Forest(Model):
         lattice_probs = np.zeros((self.width, self.height))
         for tree in self.getall("Tree"):
             lattice_tree_dist = self.calc_dist(np.array(tree.pos), coords)
-            lattice_probs += np.exp(-lattice_tree_dist / (tree.volume ** (2 / 3)))
+            lattice_probs += np.exp(-lattice_tree_dist / (tree.volume ** (1 / 3)))
 
         # Normalize probabilities
         lattice_probs /= np.sum(lattice_probs)
@@ -254,6 +256,10 @@ class Forest(Model):
         """
         Method that calls the step method for each of the trees, and then for each of the fungi.
         """
+
+        # Zero harvest volume
+        self.harvest_volume = 0
+
         self.add_substrate()
 
         self.schedule.step()
