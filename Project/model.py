@@ -22,10 +22,12 @@ class Forest(Model):
 
         self.height = width
         self.width = height
-        self.v_max = 100
+        self.v_max_global = 100
+        self.r0_global = 1.05
         self.harvest_params = harvest_params
 
         # Top n sites to plant a tree based on fertility and competition
+        # TO DO: Make this a percentage of lattice sites relative to the grid size
         self.top_n_sites = top_n_sites
 
         # Initialize harvested volume
@@ -46,10 +48,10 @@ class Forest(Model):
                                                                         (self.width, self.height))
 
         self.datacollector = DataCollector(
-             {"Trees": lambda m: len(self.getall(Tree)),
-              "Fungi": lambda m: len(self.getall(Fungus)),
-              "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.getall(Tree)]),
-              "Infected Trees": lambda m: sum([agent.infected for agent in self.getall(Tree)]),
+             {"Trees": lambda m: len(self.getall("Tree")),
+              "Fungi": lambda m: len(self.getall("Fungus")),
+              "Living Trees Total Volume": lambda m: sum([agent.volume for agent in self.getall("Tree")]),
+              "Infected Trees": lambda m: sum([agent.infected for agent in self.getall("Tree")]),
               "Mean Substrate": lambda m: np.mean(self.grid.properties['substrate'].data),
               "Mean Soil Fertility": lambda m: np.mean(self.grid.properties['soil_fertility'].data),
               "Harvested volume": lambda m: m.harvest_volume})
@@ -132,15 +134,26 @@ class Forest(Model):
         """
         return np.sqrt((pos1[..., 0] - pos2[..., 0]) ** 2 + (pos1[..., 1] - pos2[..., 1]) ** 2)
 
-    def calc_fert(self, pos, v_self, v_max):
+    def calc_fert(self, pos, v_self, v_max, Grow:bool):
         """
-        Method that calculates the fertility of the soil at position pos
+        Method that calculates the fertility of the soil at position pos and consumes if tree is growing
         """
         coord_nbrs = self.grid.get_neighborhood(tuple(pos), moore=True, include_center=False)
 
-        fert_self = min((1,self.grid.properties['soil_fertility'].data[tuple(pos)]))
-        fert_nbrs = sum([min(0.5, self.grid.properties['soil_fertility'].data[tuple(coord)]) for coord in coord_nbrs])
-        f_c = v_self/v_max * (fert_self + fert_nbrs)
+        # fert_self = min((1,self.grid.properties['soil_fertility'].data[tuple(pos)]))
+        # fert_nbrs = [min(0.5, self.grid.properties['soil_fertility'].data[tuple(coord)]) for coord in coord_nbrs]
+        # fert_nbrs_sum = sum(fert_nbrs)
+        # f_c = v_self/v_max * (fert_self + fert_nbrs_sum)
+
+        fert_self = min((v_self/v_max*5,self.grid.properties['soil_fertility'].data[tuple(pos)]))
+        fert_nbrs = [min(v_self/v_max*2.5, self.grid.properties['soil_fertility'].data[tuple(coord)]) for coord in coord_nbrs]
+        fert_nbrs_sum = sum(fert_nbrs)
+        f_c = (fert_self + fert_nbrs_sum)
+
+        if Grow:
+            self.grid.properties['soil_fertility'].data[tuple(pos)] -= fert_self
+            for idx,coord in enumerate(coord_nbrs):
+                self.grid.properties['soil_fertility'].data[tuple(coord)] -= fert_nbrs[idx]
 
         return f_c
 
@@ -156,7 +169,7 @@ class Forest(Model):
         competition = vol_nbrs / (vol_self + vol_nbrs)
         return competition
 
-    def calc_r(self, pos, r0, v_max, v_self=1):
+    def calc_r(self, pos, r0, v_max, grow=True, v_self=1):
         """
         Methods calculates the r_effective of the position pos
         Args:
@@ -166,7 +179,7 @@ class Forest(Model):
             v_self (float): volume of the agent
         """
 
-        f_c = self.calc_fert(pos, v_self, v_max)
+        f_c = self.calc_fert(pos, v_self, v_max, grow)
         comp = self.calc_comp(pos, v_self)
         F = r0 + f_c / (f_c + 10)
 
@@ -175,10 +188,10 @@ class Forest(Model):
 
 
     def getall(self, typeof):
-        if not any([type(i) == typeof for i in self.schedule.agents]):
+        if not any([agent.agent_type == typeof for agent in self.schedule.agents]):
             return ([])
         else:
-            istype = np.array([type(i) == typeof for i in self.schedule.agents])
+            istype = np.array([agent.agent_type == typeof for agent in self.schedule.agents])
             ags = np.array(self.schedule.agents)
             return list(ags[istype])
 
@@ -193,7 +206,7 @@ class Forest(Model):
 
         # Assign probabilities to all lattice sites
         lattice_probs = np.zeros((self.width, self.height))
-        for tree in self.getall(Tree):
+        for tree in self.getall("Tree"):
             lattice_tree_dist = self.calc_dist(np.array(tree.pos), coords)
             lattice_probs += np.exp(-lattice_tree_dist / (tree.volume ** (2 / 3)))
 
@@ -201,7 +214,7 @@ class Forest(Model):
         lattice_probs /= np.sum(lattice_probs)
 
         # Distribute substrate
-        for tree in self.getall(Tree):
+        for tree in self.getall("Tree"):
             # Portion of substrate to add to each lattice site
             # Assumes an average tree volume of 10
             n_portions = int(np.floor(0.075 * tree.volume))
@@ -220,8 +233,16 @@ class Forest(Model):
 
     def plant_trees_top_r(self):
         # Calculate r_effective for all positions
-        all_positions = [(x, y) for x in range(self.width) for y in range(self.height)]
-        r_effective_values = [(pos, self.calc_r(pos, self.v_max)) for pos in all_positions]
+        
+        all_positions = []
+        for x in range(self.width):
+            for y in range(self.height):
+                cell_agents = self.grid.get_cell_list_contents([x,y])
+                if len([agent for agent in cell_agents if type(agent) == Tree]) == 0: 
+                    all_positions.append((x,y))
+
+        r_effective_values = [(pos, self.calc_r(pos, self.r0_global, self.v_max_global, grow=False)) 
+                              for pos in all_positions]
 
         # Sort positions by r_effective
         r_effective_values.sort(key=lambda x: x[1], reverse=True)
