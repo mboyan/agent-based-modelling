@@ -39,7 +39,7 @@ class Tree(Organism):
         """
 
         v_current = self.volume
-        r = self.model.calc_r(self.pos, self.base_growth_rate, self.v_max, self.volume)
+        r = self.model.calc_r(self.pos, self.base_growth_rate, self.v_max, True, self.volume)
         v_update = v_current * np.exp(r * np.log(self.v_max/self.volume))
 
         self.volume = v_update
