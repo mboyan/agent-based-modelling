@@ -30,7 +30,7 @@ class Forest(Model):
 
         # Top n sites to plant a tree based on fertility and competition
         # TO DO: Make this a percentage of lattice sites relative to the grid size
-        self.top_n_sites = top_n_sites_percent * self.width * self.height
+        self.top_n_sites = int(top_n_sites_percent * self.width * self.height)
 
         # Initialize harvested volume
         self.harvest_volume = 0

@@ -107,9 +107,10 @@ class Tree(Organism):
         if self.infected and self.model.schedule.time % self.leaffall == 0:
             self.shed_leaves()
 
+        if self.harvest():
+            return
+        
         self.stochastic_removal()
-        self.harvest()
-
 
 
 class Fungus(Organism):
