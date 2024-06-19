@@ -231,7 +231,6 @@ class Forest(Model):
         # Distribute substrate
         total_volume = sum([agent.volume for agent in self.getall("Tree")])
         n_portions = int(total_volume / 1.2e5 * 100)
-        print(n_portions)
 
         # Lattice sites to add substrate to
         coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True,
