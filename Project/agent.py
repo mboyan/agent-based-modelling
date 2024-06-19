@@ -85,6 +85,19 @@ class Tree(Organism):
                     return True
         return False  # Tree is not harvested
 
+    def stochastic_removal(self):
+        ''' Stochastic removal of trees: assuming they live on average of 120 years (= 4 * 120 = 480 timesteps)
+        '''
+
+        rate_parameter = 1 / 480
+        p_die = 1 - np.exp(-rate_parameter)
+        if np.random.random() < p_die:
+            self.model.remove_agent(self)
+
+            # Add substrate to the soil of dead tree
+            coord = self.pos
+            self.model.grid.properties['substrate'].data[coord] += 1
+
     def step(self):
         """
         Tree development step.
@@ -94,7 +107,9 @@ class Tree(Organism):
         if self.infected and self.model.schedule.time % self.leaffall == 0:
             self.shed_leaves()
 
+        self.stochastic_removal()
         self.harvest()
+
 
 
 class Fungus(Organism):
@@ -199,9 +214,6 @@ class Fungus(Organism):
         -> then per timestep the probability of stochastic removal is approx 0.1'''
         if np.random.random() < 0.1:
            self.model.remove_agent(self)
-    
-
-    
 
     def step(self):
         """
