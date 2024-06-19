@@ -42,7 +42,7 @@ class Forest(Model):
 
         # Add initial substrate
         self.grid.add_property_layer(PropertyLayer('substrate', self.width, self.height, 1))
-        self.grid.properties['substrate'].data = np.random.uniform(0, max_substrate, (self.width, self.height))
+        self.grid.properties['substrate'].data = np.random.randint(0, max_substrate, (self.width, self.height))
 
         # Add initial soil fertility
         self.grid.add_property_layer(PropertyLayer('soil_fertility', self.width, self.height, 1))
@@ -214,7 +214,7 @@ class Forest(Model):
         """
         Stochastically adds substrate (woody debris)
         based on the distance to all trees in the lattice.
-        On average, 6.25*1e-4 of the tree biomass is added per time step.
+        On average, 2.5*1e-4 of the tree biomass is added per time step.
         """
 
         coords = np.transpose(np.indices((self.width, self.height)), (1, 2, 0))
@@ -229,20 +229,17 @@ class Forest(Model):
         lattice_probs /= np.sum(lattice_probs)
 
         # Distribute substrate
-        for tree in self.getall("Tree"):
-            # Portion of substrate to add to each lattice site
-            # Assumes an average tree volume of 200
-            portions_total = 6.25e-4 * tree.volume
-            n_portions = int(np.ceil(portions_total))
-            portion = portions_total / n_portions
+        total_volume = sum([agent.volume for agent in self.getall("Tree")])
+        n_portions = int(total_volume / 1.2e5 * 100)
+        print(n_portions)
 
-            # Lattice sites to add substrate to
-            coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True,
-                                                 p=lattice_probs.flatten())
-            coords_select = coords.reshape(-1, 2)[coords_idx_select]
+        # Lattice sites to add substrate to
+        coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True,
+                                                p=lattice_probs.flatten())
+        coords_select = coords.reshape(-1, 2)[coords_idx_select]
 
-            for coord in coords_select:
-                self.grid.properties['substrate'].data[tuple(coord)] += portion
+        for coord in coords_select:
+            self.grid.properties['substrate'].data[tuple(coord)] += 1
 
     def plant_trees(self):
         if self.schedule.steps % 4 == 0:  # Every 4 time steps i.e plantation every year
