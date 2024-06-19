@@ -229,18 +229,17 @@ class Forest(Model):
         lattice_probs /= np.sum(lattice_probs)
 
         # Distribute substrate
-        for tree in self.getall("Tree"):
-            # Portion of substrate to add to each lattice site
-            # Assumes an average tree volume of 10
-            n_portions = int(np.floor(0.075 * tree.volume))
+        total_volume = sum([agent.volume for agent in self.getall("Tree")])
+        n_portions = int(total_volume / 1.2e5 * 100)
+        print(n_portions)
 
-            # Lattice sites to add substrate to
-            coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True,
-                                                 p=lattice_probs.flatten())
-            coords_select = coords.reshape(-1, 2)[coords_idx_select]
+        # Lattice sites to add substrate to
+        coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True,
+                                                p=lattice_probs.flatten())
+        coords_select = coords.reshape(-1, 2)[coords_idx_select]
 
-            for coord in coords_select:
-                self.grid.properties['substrate'].data[tuple(coord)] += 1
+        for coord in coords_select:
+            self.grid.properties['substrate'].data[tuple(coord)] += 1
 
     def plant_trees(self):
         if self.schedule.steps % 4 == 0:  # Every 4 time steps i.e plantation every year
