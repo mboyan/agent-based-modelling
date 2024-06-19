@@ -44,22 +44,28 @@ def run_batches(model, problem, outputs, n_max_timesteps, n_replicates, n_distin
             variable_parameters[name] = val
 
 
-        run_result = batch.batch_run(model, variable_parameters, iterations=n_replicates, max_steps=n_max_timesteps)
+        run_result = batch.batch_run(model, variable_parameters,
+                                     iterations=n_replicates, max_steps=n_max_timesteps,
+                                     data_collection_period=1)
+        print(run_result)
         
         # Get relevant keys from the run result
-        run_keys_relevant = [key for key in run_result[0].keys() if key in outputs or key == 'RunId' or key in problem['names']]
+        run_keys_relevant = [key for key in run_result[0].keys() if key in outputs or key in ['RunId', 'Step'] or key in problem['names']]
+        run_result_relevant = [{key: run_result[step][key] for key in run_keys_relevant} for step in range(len(run_result))]
 
         # Store the results in the data frame
-        for result in run_keys_relevant:
-            # data.loc[row_ct, result] = run_result[0][result]
-            # row_ct += 1
-            collected_data.append(run_result[0][result])
+        collected_data.extend(run_result_relevant)
+        # for result in run_keys_relevant:
+        #     # data.loc[row_ct, result] = run_result[0][result]
+        #     # row_ct += 1
+        #     collected_data.append(run_result[0][result])
 
-        clear_output()
+        # clear_output()
 
         count += 1
         print(f'{count / len(param_values) * 100:.2f}% done')
     
+    print(collected_data)
     data = pd.DataFrame(collected_data)
 
     data.reset_index(drop=True, inplace=True)

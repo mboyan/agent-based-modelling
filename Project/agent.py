@@ -3,6 +3,14 @@ from mesa import Agent
 import random
 
 
+def check_non_empty(cell_value):
+        """
+        Check for available property in a given cell.
+        Args:
+            cell_value: Value of the cell.
+        """
+        return cell_value > 0
+
 class Organism(Agent):
     """
     General class for all organisms in the model.
@@ -37,8 +45,11 @@ class Tree(Organism):
         self.volume = init_volume
         self.dispersal_coeff = 4
         self.infected = False
-        self.v_max = 100
+        self.v_max = 350
         self.leaffall = 4
+
+        # Mark tree site
+        self.model.tree_sites[tuple(self.pos)] = True
 
     def grow(self):
         """
@@ -47,7 +58,7 @@ class Tree(Organism):
 
         v_current = self.volume
         r = self.model.calc_r(self.pos, self.v_max, True, self.volume)
-        v_update = v_current * np.exp(r*(1-v_current/350)**4)
+        v_update = v_current * np.exp(r*(1-v_current/self.v_max)**4)
 
         self.volume = v_update
 
@@ -57,16 +68,24 @@ class Tree(Organism):
         TODO
         - don't scan entire lattice
         """
+        substrate_cells = self.model.grid.properties['substrate'].select_cells(check_non_empty)
+
+        for cell in substrate_cells:
+            dist = self.calc_dist(cell, self.pos)
+
+            # Inoculate substrate
+            if np.random.random() < np.exp(-dist / self.dispersal_coeff):
+                self.model.new_agent(Fungus, cell)
         # Scan all substrate on lattice
-        for x in range(self.model.width):
-            for y in range(self.model.height):
-                if self.model.grid.properties['substrate'].data[x, y] > 0:
+        # for x in range(self.model.width):
+        #     for y in range(self.model.height):
+        #         if self.model.grid.properties['substrate'].data[x, y] > 0:
 
-                    dist = self.calc_dist((x, y), self.pos)
+        #             dist = self.calc_dist((x, y), self.pos)
 
-                    # Inoculate substrate
-                    if np.random.random() < np.exp(-dist / self.dispersal_coeff):
-                        self.model.new_agent(Fungus, (x, y))
+        #             # Inoculate substrate
+        #             if np.random.random() < np.exp(-dist / self.dispersal_coeff):
+        #                 self.model.new_agent(Fungus, (x, y))
 
     def harvest(self):
         """
@@ -91,7 +110,6 @@ class Tree(Organism):
                 if random.random() < harvest_probability:
                     self.model.harvest_volume += self.volume
                     self.model.remove_agent(self)  # Remove the tree
-                    self.model.tree_sites[self.pos] = False # Update tree sites
                     return True
         return False  # Tree is not harvested
 
@@ -102,12 +120,13 @@ class Tree(Organism):
         rate_parameter = 1 / 480
         p_die = 1 - np.exp(-rate_parameter)
         if np.random.random() < p_die:
-            self.model.remove_agent(self)
-            self.model.tree_sites[self.pos] = False # Update tree sites
-
             # Add substrate to the soil of dead tree
             coord = self.pos
-            self.model.grid.properties['substrate'].data[coord] += 1
+            self.model.grid.properties['substrate'].data[tuple(coord)] += self.volume#1
+
+            # Remove tree
+            self.model.remove_agent(self)
+            
 
     def step(self):
         """

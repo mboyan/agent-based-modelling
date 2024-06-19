@@ -24,13 +24,11 @@ class Forest(Model):
 
         self.height = width
         self.width = height
-        self.v_max_global = 100 
-        #self.r0_global = 1.05 # guess this isn't needed anymore
+        self.v_max_global = 350
         self.harvest_params = harvest_params
         self.fert_comp_ratio = fert_comp_ratio
 
         # Top n sites to plant a tree based on fertility and competition
-        # TO DO: Make this a percentage of lattice sites relative to the grid size
         self.top_n_sites = int(top_n_sites_percent * self.width * self.height)
 
         # Initialize harvested volume
@@ -61,14 +59,12 @@ class Forest(Model):
               "Soil Fertility Variance": lambda m: np.var(self.grid.properties['soil_fertility'].data),
               "Harvested volume": lambda m: m.harvest_volume})
         
+        # Initialize tree_sites array
+        self.tree_sites = np.zeros((self.width, self.height), dtype=bool)
+
         # Initialise populations
         self.init_population(n_init_trees, Tree, (5, 270), 4)
         self.init_population(n_init_fungi, Fungus, (1, 3), 1)
-
-        # Keep track of tree-occupied positions
-        self.tree_sites = np.zeros((self.width, self.height), dtype=bool)
-        for agent in self.getall("Tree"):
-            self.tree_sites[agent.pos] = True
 
         self.running = True
         self.datacollector.collect(self)
@@ -139,8 +135,13 @@ class Forest(Model):
         Method that enables us to remove passed agents.
         """
 
+        # If tree, remove from tree_sites
+        if isinstance(agent, Tree):
+            self.tree_sites[tuple(agent.pos)] = False
+
         # Remove agent from grid
         self.grid.remove_agent(agent)
+        
 
         # Remove agent from schedule
         self.schedule.remove(agent)
@@ -220,7 +221,6 @@ class Forest(Model):
         """
         Stochastically adds substrate (woody debris)
         based on the distance to all trees in the lattice.
-        On average, 2.5*1e-4 of the tree biomass is added per time step.
         """
 
         coords = np.transpose(np.indices((self.width, self.height)), (1, 2, 0))
@@ -236,7 +236,7 @@ class Forest(Model):
 
         # Distribute substrate
         total_volume = sum([agent.volume for agent in self.getall("Tree")])
-        n_portions = int(total_volume / 1.2e5 * 100)
+        n_portions = int(total_volume / 1.2e5 * 75) # Based on paper
 
         # Lattice sites to add substrate to
         coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True,
@@ -251,27 +251,27 @@ class Forest(Model):
             # self.plant_trees_top_r()
             self.plant_trees_top_r_optimized()
 
-    def plant_trees_top_r(self):
-        # Calculate r_effective for all positions
+    # def plant_trees_top_r(self):
+    #     # Calculate r_effective for all positions
         
-        all_positions = []
-        for x in range(self.width):
-            for y in range(self.height):
-                cell_agents = self.grid.get_cell_list_contents([x,y])
-                if not any(isinstance(agent, Tree) for agent in cell_agents):
-                    all_positions.append((x,y))
+    #     all_positions = []
+    #     for x in range(self.width):
+    #         for y in range(self.height):
+    #             cell_agents = self.grid.get_cell_list_contents([x,y])
+    #             if not any(isinstance(agent, Tree) for agent in cell_agents):
+    #                 all_positions.append((x,y))
 
-        random.shuffle(all_positions)
+    #     random.shuffle(all_positions)
 
-        r_effective_values = [(pos, self.calc_r(pos, self.v_max_global, grow=False)) 
-                              for pos in all_positions]
+    #     r_effective_values = [(pos, self.calc_r(pos, self.v_max_global, grow=False)) 
+    #                           for pos in all_positions]
 
-        # Sort positions by r_effective
-        r_effective_values.sort(key=lambda x: x[1], reverse=True)
+    #     # Sort positions by r_effective
+    #     r_effective_values.sort(key=lambda x: x[1], reverse=True)
 
-        # Plant trees in top n positions
-        for pos, _ in r_effective_values[:self.top_n_sites]:
-            self.new_agent(Tree, pos, init_size=1, disp=1)
+    #     # Plant trees in top n positions
+    #     for pos, _ in r_effective_values[:self.top_n_sites]:
+    #         self.new_agent(Tree, pos, init_size=1, disp=1)
 
     def plant_trees_top_r_optimized(self):
 
