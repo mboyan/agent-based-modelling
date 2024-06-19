@@ -15,6 +15,15 @@ class Organism(Agent):
         self.model.grid.place_agent(self, pos)
         self.pos = pos
 
+    def calc_dist(self, pos1, pos2):
+        """
+        Calculate the distance between two positions.
+        """
+        x1, y1 = pos1
+        x2, y2 = pos2
+
+        return np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
 
 class Tree(Organism):
     """
@@ -53,7 +62,7 @@ class Tree(Organism):
             for y in range(self.model.height):
                 if self.model.grid.properties['substrate'].data[x, y] > 0:
 
-                    dist = np.sqrt((x - self.pos[0]) ** 2 + (y - self.pos[1]) ** 2)
+                    dist = self.calc_dist((x, y), self.pos)
 
                     # Inoculate substrate
                     if np.random.random() < np.exp(-dist / self.dispersal_coeff):
@@ -82,6 +91,7 @@ class Tree(Organism):
                 if random.random() < harvest_probability:
                     self.model.harvest_volume += self.volume
                     self.model.remove_agent(self)  # Remove the tree
+                    self.model.tree_sites[self.pos] = False # Update tree sites
                     return True
         return False  # Tree is not harvested
 
@@ -93,6 +103,7 @@ class Tree(Organism):
         p_die = 1 - np.exp(-rate_parameter)
         if np.random.random() < p_die:
             self.model.remove_agent(self)
+            self.model.tree_sites[self.pos] = False # Update tree sites
 
             # Add substrate to the soil of dead tree
             coord = self.pos
@@ -146,8 +157,7 @@ class Fungus(Organism):
         '''
         Try to infect woody debris.
         '''
-        x, y = cell
-        dist = np.sqrt((x - self.pos[0]) ** 2 + (y - self.pos[1]) ** 2)
+        dist = self.calc_dist(cell, self.pos)
 
         # count fungi in cell to scale probability with space competition
         contents = self.model.grid.get_cell_list_contents(cell)
@@ -159,14 +169,13 @@ class Fungus(Organism):
         # probabilistic infection
         if np.random.random() < prob:
             # self.model.new_agent(Fungus, (x, y))
-            self.model.new_agent(Fungus, (x, y))
+            self.model.new_agent(Fungus, cell)
 
     def infect_tree(self, tree):
         '''
         Try to infect tree.
         '''
-        x, y = tree.pos
-        dist = np.sqrt((x - self.pos[0]) ** 2 + (y - self.pos[1]) ** 2)
+        dist = self.calc_dist(tree.pos, self.pos)
         prob = np.exp(-dist / self.disp)
 
         # print(prob)
