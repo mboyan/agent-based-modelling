@@ -68,7 +68,7 @@ class Tree(Organism):
         TODO
         - finish up + remove returns
         """
-        harvest_vol_threshold, harvest_percent_threshold, harvest_probability = self.model.harvest_params
+        harvest_vol_threshold, harvest_nbrs_threshold, harvest_probability = self.model.harvest_params
 
         # Check volume threshold
         if self.volume > harvest_vol_threshold:
@@ -77,7 +77,7 @@ class Tree(Organism):
             neighbouring_agents = self.model.grid.get_neighbors(tuple(self.pos), moore=True, include_center=False)
             count_trees = sum(agent.agent_type == "Tree" for agent in neighbouring_agents)
 
-            if count_trees / 8 > harvest_percent_threshold:
+            if count_trees >= harvest_nbrs_threshold:
                 # Include a random probability
                 if random.random() < harvest_probability:
                     self.model.harvest_volume += self.volume

@@ -16,8 +16,8 @@ class Forest(Model):
                  harvest_params, 
                  fert_comp_ratio,
                  max_substrate=3, 
-                 max_soil_fertility=3,
-                 top_n_sites=5):
+                 max_soil_fertility=1,
+                 top_n_sites_percent=0.05):
 
         super().__init__()
 
@@ -30,7 +30,7 @@ class Forest(Model):
 
         # Top n sites to plant a tree based on fertility and competition
         # TO DO: Make this a percentage of lattice sites relative to the grid size
-        self.top_n_sites = top_n_sites
+        self.top_n_sites = top_n_sites_percent * self.width * self.height
 
         # Initialize harvested volume
         self.harvest_volume = 0
@@ -61,7 +61,7 @@ class Forest(Model):
               "Harvested volume": lambda m: m.harvest_volume})
         
         # Initialise populations
-        self.init_population(n_init_trees, Tree, (5, 30), 4)
+        self.init_population(n_init_trees, Tree, (5, 270), 4)
         self.init_population(n_init_fungi, Fungus, (1, 3), 1)
 
         self.running = True
