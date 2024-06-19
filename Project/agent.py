@@ -211,10 +211,10 @@ class Fungus(Organism):
 
         if self.energy > 4:
             self.sporulate()
-            self.stochastic_removal()
         elif self.energy < 1:
             self.die()
-        else:
-            self.stochastic_removal()
+            return
+
+        self.stochastic_removal()
         
         
