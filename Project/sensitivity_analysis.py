@@ -23,9 +23,9 @@ def run_batches(model, problem, outputs, n_max_timesteps, n_replicates, n_distin
     print(f'Running a total of {param_values.shape[0]} samples.')
 
     # Find indices of parameters that should be integers
-    integer_param_names = ['n_init_trees', 'width', 'height', 'n_init_fungi']
+    integer_param_names = ['n_init_trees', 'n_init_fungi', 'width', 'height', 'harvest_nbrs']
     integer_param_indices = [problem['names'].index(name) for name in integer_param_names if name in problem['names']]
-    
+
     collected_data = []
 
     count = 0

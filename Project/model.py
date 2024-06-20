@@ -15,18 +15,29 @@ class Forest(Model):
                  n_init_trees=100, 
                  n_init_fungi=50, 
                  harvest_params=[150,4,0.5], 
-                 fert_comp_ratio=0.5,
+                 fert_comp_ratio_exponent=-0.3,
                  max_substrate=3, 
                  max_soil_fertility=1,
-                 top_n_sites_percent=0.05):
+                 top_n_sites_percent=0.05,
+                 harvest_volume=None,
+                 harvest_nbrs=None,
+                 harvest_prob=None):
 
         super().__init__()
+
+        # Overwrite harvest parameters if passed
+        if harvest_volume is not None:
+            harvest_params[0] = harvest_volume
+        if harvest_nbrs is not None:
+            harvest_params[1] = harvest_nbrs
+        if harvest_prob is not None:
+            harvest_params[2] = harvest_prob
 
         self.height = width
         self.width = height
         self.v_max_global = 350
         self.harvest_params = harvest_params
-        self.fert_comp_ratio = fert_comp_ratio
+        self.fert_comp_ratio = 10**fert_comp_ratio_exponent
 
         # Top n sites to plant a tree based on fertility and competition
         self.top_n_sites = int(top_n_sites_percent * self.width * self.height)
