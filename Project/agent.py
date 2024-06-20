@@ -34,6 +34,7 @@ class Tree(Organism):
         self.leaffall = 4
         self.inf_loss = 0.05
 
+
     def grow(self):
         """
         Calculate tree growth for next timestep. 
@@ -44,6 +45,7 @@ class Tree(Organism):
         v_update = v_current * np.exp(r*(1-v_current/350)**4)
 
         self.volume = v_update
+
 
     def shed_leaves(self):
         """     
@@ -94,6 +96,7 @@ class Tree(Organism):
 
         self.grow()
         self.harvest()
+
 
 
 class Fungus(Organism):
@@ -195,7 +198,8 @@ class Fungus(Organism):
         ''' 
         Stochastic removal of fungi: assuming they live on average for 5 years (=20 timesteps = 20*3 months)
          and the probability of them dying during 5 years is 0.9 = 1−(prob not dying)^20
-        -> then per timestep the probability of stochastic removal is approx 0.1'''
+        -> then per timestep the probability of stochastic removal is approx 0.1
+        '''
         if np.random.random() < 0.1:
            self.model.remove_agent(self)
     
@@ -210,8 +214,8 @@ class Fungus(Organism):
             self.sporulate()
         elif self.energy < 1:
             self.die()
-            return 
-        
+            return
+
         self.stochastic_removal()
         
         

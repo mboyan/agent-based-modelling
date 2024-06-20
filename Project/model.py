@@ -6,6 +6,7 @@ from mesa.datacollection import DataCollector
 from mesa.time import RandomActivation
 from agent import Tree, Fungus, Organism
 
+
 class Forest(Model):
 
     def __init__(self, 
@@ -67,6 +68,7 @@ class Forest(Model):
         self.running = True
         self.datacollector.collect(self)
 
+
     def init_population(self, n_agents, agent_type, init_size_range, dispersal_coeff=1):
         """
         Method that initializes the population of trees and fungi.
@@ -93,7 +95,7 @@ class Forest(Model):
         for coord in coords_select:
             self.new_agent(agent_type, coord, np.random.randint(init_size_range[0], init_size_range[1] + 1), dispersal_coeff)
             # params = [coord, np.random.randint(init_size_range[0], init_size_range[1] + 1), dispersal_coeff]
-            # self.test_agent(agent_type, params)
+
 
     def new_agent(self, agent_type, pos, init_size=1, disp=1):
         """
@@ -105,19 +107,7 @@ class Forest(Model):
 
         # Add agent to schedule
         self.schedule.add(new_agent)
-    
-    
-    # def test_agent(self, agent_type, pos, init_size=1, disp=1):
-    #     '''
-    #     Generalized agent addition function trial.
-    #     '''
-    #     # print(*params)
-    #     # if agent_type == 'Fungus':
-    #         # [print(f'{agent_type} {type(param)}') for param in params]
-    #     # agent = agent_type(self.next_id(), self, *params)
-    #     new_agent = agent_type(self.next_id(), self, pos, init_size, disp)
         
-    #     self.schedule.add(new_agent)
     
     def find_agent(self, agent):
         # This method should return the position of the agent or None if the agent is not found
@@ -140,12 +130,12 @@ class Forest(Model):
         self.schedule.remove(agent)
 
     
-
     def calc_dist(self, pos1, pos2):
         """
         Method that calculates the Euclidean distance between two points.
         """
         return np.sqrt((pos1[..., 0] - pos2[..., 0]) ** 2 + (pos1[..., 1] - pos2[..., 1]) ** 2)
+
 
     def calc_fert(self, pos, v_self, v_max, Grow:bool):
         """
@@ -170,6 +160,7 @@ class Forest(Model):
 
         return f_c
 
+
     def calc_comp(self, pos, v_self):
         """
         Method that calculates the competition of the position pos
@@ -181,6 +172,7 @@ class Forest(Model):
 
         competition = vol_nbrs / (vol_self + vol_nbrs)
         return competition
+
 
     #def calc_r(self, pos, r0, v_max, grow=True, v_self=1):
     def calc_r(self, pos, v_max, grow=True, v_self=1):
@@ -241,9 +233,11 @@ class Forest(Model):
         for coord in coords_select:
             self.grid.properties['substrate'].data[tuple(coord)] += 1
 
+
     def plant_trees(self):
         if self.schedule.steps % 4 == 0:  # Every 4 time steps i.e plantation every year
             self.plant_trees_top_r()
+
 
     def plant_trees_top_r(self):
         # Calculate r_effective for all positions
@@ -267,6 +261,7 @@ class Forest(Model):
         for pos, _ in r_effective_values[:self.top_n_sites]:
             self.new_agent(Tree, pos, init_size=1, disp=1)
 
+
     def step(self):
         """
         Method that calls the step method for trees and fungi in randomized order.
@@ -280,6 +275,7 @@ class Forest(Model):
         self.plant_trees()
         # Save statistics
         self.datacollector.collect(self)
+
 
     def run_model(self, n_steps=100):
         """
