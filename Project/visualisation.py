@@ -44,5 +44,6 @@ def plot_property_layer(model, layer_name):
     """
 
     plt.imshow(model.grid.properties[layer_name].data, cmap='viridis')
+    plt.title(layer_name)
     plt.colorbar()
     plt.show()

@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import heapq
 from mesa import Model
 from mesa.space import MultiGrid, PropertyLayer
 from mesa.datacollection import DataCollector
@@ -10,28 +11,26 @@ from agent import Tree, Fungus, Organism
 class Forest(Model):
 
     def __init__(self, 
-                 width, 
-                 height, 
-                 n_init_trees, 
-                 n_init_fungi, 
-                 harvest_params, 
-                 fert_comp_ratio,
+                 width=20, 
+                 height=20, 
+                 n_init_trees=100, 
+                 n_init_fungi=50, 
+                 harvest_params=[150,4,0.5], 
+                 fert_comp_ratio=0.5,
                  max_substrate=3, 
-                 max_soil_fertility=3,
-                 top_n_sites=5):
+                 max_soil_fertility=1,
+                 top_n_sites_percent=0.05):
 
         super().__init__()
 
         self.height = width
         self.width = height
-        self.v_max_global = 100 
-        #self.r0_global = 1.05 # guess this isn't needed anymore
+        self.v_max_global = 350
         self.harvest_params = harvest_params
         self.fert_comp_ratio = fert_comp_ratio
 
         # Top n sites to plant a tree based on fertility and competition
-        # TO DO: Make this a percentage of lattice sites relative to the grid size
-        self.top_n_sites = top_n_sites
+        self.top_n_sites = int(top_n_sites_percent * self.width * self.height)
 
         # Initialize harvested volume
         self.harvest_volume = 0
@@ -61,8 +60,11 @@ class Forest(Model):
               "Soil Fertility Variance": lambda m: np.var(self.grid.properties['soil_fertility'].data),
               "Harvested volume": lambda m: m.harvest_volume})
         
+        # Initialize tree_sites array
+        self.tree_sites = np.zeros((self.width, self.height), dtype=bool)
+
         # Initialise populations
-        self.init_population(n_init_trees, Tree, (5, 30), 4)
+        self.init_population(n_init_trees, Tree, (5, 270), 4)
         self.init_population(n_init_fungi, Fungus, (1, 3), 1)
 
         self.running = True
@@ -123,8 +125,13 @@ class Forest(Model):
         Method that enables us to remove passed agents.
         """
 
+        # If tree, remove from tree_sites
+        if isinstance(agent, Tree):
+            self.tree_sites[tuple(agent.pos)] = False
+
         # Remove agent from grid
         self.grid.remove_agent(agent)
+        
 
         # Remove agent from schedule
         self.schedule.remove(agent)
@@ -206,7 +213,6 @@ class Forest(Model):
         """
         Stochastically adds substrate (woody debris)
         based on the distance to all trees in the lattice.
-        On average, 2.5*1e-4 of the tree biomass is added per time step.
         """
 
         coords = np.transpose(np.indices((self.width, self.height)), (1, 2, 0))
@@ -222,8 +228,7 @@ class Forest(Model):
 
         # Distribute substrate
         total_volume = sum([agent.volume for agent in self.getall("Tree")])
-        n_portions = int(total_volume / 1.2e5 * 100)
-        print(n_portions)
+        n_portions = int(total_volume / 1.2e5 * 75) # Based on paper
 
         # Lattice sites to add substrate to
         coords_idx_select = np.random.choice(np.arange(self.width * self.height), n_portions, replace=True,
@@ -236,29 +241,52 @@ class Forest(Model):
 
     def plant_trees(self):
         if self.schedule.steps % 4 == 0:  # Every 4 time steps i.e plantation every year
-            self.plant_trees_top_r()
+            # self.plant_trees_top_r()
+            self.plant_trees_top_r_optimized()
 
-
-    def plant_trees_top_r(self):
-        # Calculate r_effective for all positions
+    # def plant_trees_top_r(self):
+    #     # Calculate r_effective for all positions
         
-        all_positions = []
-        for x in range(self.width):
-            for y in range(self.height):
-                cell_agents = self.grid.get_cell_list_contents([x,y])
-                if not any(isinstance(agent, Tree) for agent in cell_agents):
-                    all_positions.append((x,y))
+    #     all_positions = []
+    #     for x in range(self.width):
+    #         for y in range(self.height):
+    #             cell_agents = self.grid.get_cell_list_contents([x,y])
+    #             if not any(isinstance(agent, Tree) for agent in cell_agents):
+    #                 all_positions.append((x,y))
 
-        random.shuffle(all_positions)
+    #     random.shuffle(all_positions)
 
-        r_effective_values = [(pos, self.calc_r(pos, self.v_max_global, grow=False)) 
-                              for pos in all_positions]
+    #     r_effective_values = [(pos, self.calc_r(pos, self.v_max_global, grow=False)) 
+    #                           for pos in all_positions]
 
-        # Sort positions by r_effective
-        r_effective_values.sort(key=lambda x: x[1], reverse=True)
+    #     # Sort positions by r_effective
+    #     r_effective_values.sort(key=lambda x: x[1], reverse=True)
 
+    #     # Plant trees in top n positions
+    #     for pos, _ in r_effective_values[:self.top_n_sites]:
+    #         self.new_agent(Tree, pos, init_size=1, disp=1)
+
+    def plant_trees_top_r_optimized(self):
+
+        # Get and shuffle empty positions
+        empty_positions = np.where(self.tree_sites == False)
+        empty_positions = list(zip(empty_positions[0], empty_positions[1]))
+        random.shuffle(empty_positions)
+        
+        # Select a batch of candidates if applicable
+        candidate_positions = empty_positions[:min(len(empty_positions), self.top_n_sites * 2)]  # Adjust multiplier based on expected density of trees
+        
+        # Calculate r_effective for candidates and use a heap to find top n
+        heap = []
+        for pos in candidate_positions:
+            r_effective = self.calc_r(pos, self.v_max_global, grow=False)
+            # Use negative r_effective because heapq is a min-heap, but we need max values
+            heapq.heappush(heap, (-r_effective, pos))
+            if len(heap) > self.top_n_sites:
+                heapq.heappop(heap)
+        
         # Plant trees in top n positions
-        for pos, _ in r_effective_values[:self.top_n_sites]:
+        for _, pos in heap:
             self.new_agent(Tree, pos, init_size=1, disp=1)
 
 

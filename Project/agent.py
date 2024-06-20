@@ -3,6 +3,14 @@ from mesa import Agent
 import random
 
 
+def check_non_empty(cell_value):
+        """
+        Check for available property in a given cell.
+        Args:
+            cell_value: Value of the cell.
+        """
+        return cell_value > 0
+
 class Organism(Agent):
     """
     General class for shared attributes in all organisms of the model.
@@ -14,6 +22,15 @@ class Organism(Agent):
         self.disp = disp
         self.pos = pos
         self.model.grid.place_agent(self, pos)
+
+    def calc_dist(self, pos1, pos2):
+        """
+        Calculate the distance between two positions.
+        """
+        x1, y1 = pos1
+        x2, y2 = pos2
+
+        return np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
 
 class Tree(Organism):
@@ -30,10 +47,13 @@ class Tree(Organism):
         self.volume = init_volume
         self.dispersal_coeff = 4
         self.infected = False
-        self.v_max = 100
+        self.v_max = 350
         self.leaffall = 4
         self.inf_loss = 0.05
 
+
+        # Mark tree site
+        self.model.tree_sites[tuple(self.pos)] = True
 
     def grow(self):
         """
@@ -42,7 +62,7 @@ class Tree(Organism):
 
         v_current = self.volume
         r = self.model.calc_r(self.pos, self.v_max, True, self.volume)
-        v_update = v_current * np.exp(r*(1-v_current/350)**4)
+        v_update = v_current * np.exp(r*(1-v_current/self.v_max)**4)
 
         self.volume = v_update
 
@@ -52,14 +72,14 @@ class Tree(Organism):
         Infected trees stochastically drop leaves on the grid
         and inoculate substrate on the forest floor.
         """
-        for x in range(self.model.width):
-            for y in range(self.model.height):
-                # check for substrate on grid point
-                if self.model.grid.properties['substrate'].data[x, y] > 0:
-                    # inoculate substrate based on distance from tree
-                    dist = np.sqrt((x - self.pos[0]) ** 2 + (y - self.pos[1]) ** 2)
-                    if np.random.random() < np.exp(-dist / self.dispersal_coeff):
-                        self.model.new_agent(Fungus, (x, y))
+        substrate_cells = self.model.grid.properties['substrate'].select_cells(check_non_empty)
+
+        for cell in substrate_cells:
+            dist = self.calc_dist(cell, self.pos)
+
+            # Inoculate substrate
+            if np.random.random() < np.exp(-dist / self.dispersal_coeff):
+                self.model.new_agent(Fungus, cell)
 
 
     def harvest(self):
@@ -67,7 +87,7 @@ class Tree(Organism):
         Trees are stochastically harvested once they reach 
         a threshold volume and number of neighbors.
         """
-        harvest_vol_threshold, harvest_percent_threshold, harvest_probability = self.model.harvest_params
+        harvest_vol_threshold, harvest_nbrs_threshold, harvest_probability = self.model.harvest_params
 
         # volume threshold
         if self.volume > harvest_vol_threshold:
@@ -75,12 +95,27 @@ class Tree(Organism):
             neighbouring_agents = self.model.grid.get_neighbors(tuple(self.pos), moore=True, include_center=False)
             count_trees = sum(agent.agent_type == "Tree" for agent in neighbouring_agents)
 
-            if count_trees / 8 > harvest_percent_threshold:
-                # remove tree stochastically
+            # remove tree stochastically
+            if count_trees >= harvest_nbrs_threshold:
                 if random.random() < harvest_probability:
                     self.model.harvest_volume += self.volume
                     self.model.remove_agent(self)  
     
+
+    def stochastic_removal(self):
+        ''' Stochastic removal of trees: assuming they live on average of 120 years (= 4 * 120 = 480 timesteps)
+        '''
+
+        rate_parameter = 1 / 480
+        p_die = 1 - np.exp(-rate_parameter)
+        if np.random.random() < p_die:
+            # Add substrate to the soil of dead tree
+            coord = self.pos
+            self.model.grid.properties['substrate'].data[tuple(coord)] += self.volume*0.1
+
+            # Remove tree
+            self.model.remove_agent(self)
+            
 
     def step(self):
         """
@@ -94,8 +129,10 @@ class Tree(Organism):
             if random.random() < self.inf_loss:
                 self.infected = False
 
-        self.grow()
-        self.harvest()
+        if self.harvest():
+            return
+        
+        self.stochastic_removal()
 
 
 
@@ -134,8 +171,7 @@ class Fungus(Organism):
         '''
         Try to infect woody debris.
         '''
-        x, y = cell
-        dist = np.sqrt((x - self.pos[0]) ** 2 + (y - self.pos[1]) ** 2)
+        dist = self.calc_dist(cell, self.pos)
 
         # count fungi in cell to scale probability with space competition
         contents = self.model.grid.get_cell_list_contents(cell)
@@ -146,15 +182,14 @@ class Fungus(Organism):
 
         # probabilistic infection
         if np.random.random() < prob:
-            self.model.new_agent(Fungus, (x, y))
+            self.model.new_agent(Fungus, cell)
 
 
     def infect_tree(self, tree):
         '''
         Try to infect tree.
         '''
-        x, y = tree.pos
-        dist = np.sqrt((x - self.pos[0]) ** 2 + (y - self.pos[1]) ** 2)
+        dist = self.calc_dist(tree.pos, self.pos)
         prob = np.exp(-dist / self.disp)
 
         # probabilistic infection
@@ -187,6 +222,7 @@ class Fungus(Organism):
             if not tree.infected:
                 self.infect_tree(tree)
 
+
     def die(self):
         """
         Die if no energy or killed through environment
@@ -202,7 +238,7 @@ class Fungus(Organism):
         '''
         if np.random.random() < 0.1:
            self.model.remove_agent(self)
-    
+
 
     def step(self):
         """
