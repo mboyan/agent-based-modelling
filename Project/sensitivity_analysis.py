@@ -47,7 +47,11 @@ def run_batches(model, problem, outputs, n_max_timesteps, n_replicates, n_distin
         
         # Get relevant keys from the run result
         run_keys_relevant = [key for key in run_result[0].keys() if key in outputs or key in ['RunId', 'Step'] or key in problem['names']]
-        run_result_relevant = [{key: run_result[step][key] for key in run_keys_relevant} for step in range(len(run_result))]
+        run_result_relevant = []
+        for step in range(len(run_result)):
+            run_result_step = {key: run_result[step][key] for key in run_keys_relevant}
+            run_result_step['SimId'] = count * n_replicates + run_result_step['RunId']
+            run_result_relevant.append(run_result_step)
 
         # Store the results in the data frame
         collected_data.extend(run_result_relevant)
@@ -64,19 +68,35 @@ def run_batches(model, problem, outputs, n_max_timesteps, n_replicates, n_distin
     return data
 
 
-def sobol_analyse(data, problem, outputs):
+def sobol_analyse(data, problem, outputs, mean_over_last):
     """
     Analyse the collected data with Sobol sensitivity analysis and plot the results.
     Args:
-        data: collected data from the model runs
-        problem: SALib problem dictionary
-        outputs: list of output variable names to analyse
+        data (pd.DataFrame): collected data from the model runs
+        problem (dict): SALib problem dictionary
+        outputs (list of str): list of output variable names to analyse
+        mean_over_last (int): number of timesteps to average over for each replicate
     """
 
+    max_steps = data['Step'].max() + 1
+    max_sims = data['SimId'].max() + 1
+    
+    # Take the last mean_over_last timesteps for each simulation and average over them
+    data_averages = pd.DataFrame(columns=data.columns)
+    for sim_id in range(max_sims):
+        data_average = data[data['SimId'] == sim_id][data['Step'] == 0]
+        for output in outputs:
+            Y_last = data[output][data['SimId'] == sim_id][data['Step'] > max_steps - mean_over_last]
+            Y_mean = Y_last.mean()
+            data_average[output] = [Y_mean]
+        data_averages = pd.concat([data_averages, data_average], ignore_index=True)
+
+    # Calculate the sensitivity indices
     sensitivity_indices = {}
+
     for output in outputs:
-        Y = data[output].values
-        Si = sobol.analyze(problem, Y, print_to_console=True)
+        Y = data_averages[output].values
+        Si = sobol.analyze(problem, Y, print_to_console=False)
         sensitivity_indices[output] = Si
     
     return sensitivity_indices
