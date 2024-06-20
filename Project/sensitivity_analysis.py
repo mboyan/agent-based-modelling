@@ -62,3 +62,21 @@ def run_batches(model, problem, outputs, n_max_timesteps, n_replicates, n_distin
     data.reset_index(drop=True, inplace=True)
 
     return data
+
+
+def sobol_analyse(data, problem, outputs):
+    """
+    Analyse the collected data with Sobol sensitivity analysis and plot the results.
+    Args:
+        data: collected data from the model runs
+        problem: SALib problem dictionary
+        outputs: list of output variable names to analyse
+    """
+
+    sensitivity_indices = {}
+    for output in outputs:
+        Y = data[output].values
+        Si = sobol.analyze(problem, Y, print_to_console=True)
+        sensitivity_indices[output] = Si
+    
+    return sensitivity_indices
