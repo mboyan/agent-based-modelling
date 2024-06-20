@@ -122,7 +122,7 @@ class Tree(Organism):
         if np.random.random() < p_die:
             # Add substrate to the soil of dead tree
             coord = self.pos
-            self.model.grid.properties['substrate'].data[tuple(coord)] += self.volume#1
+            self.model.grid.properties['substrate'].data[tuple(coord)] += self.volume*0.1
 
             # Remove tree
             self.model.remove_agent(self)
