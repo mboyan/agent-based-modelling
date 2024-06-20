@@ -25,10 +25,7 @@ def run_batches(model, problem, outputs, n_max_timesteps, n_replicates, n_distin
     # Find indices of parameters that should be integers
     integer_param_names = ['n_init_trees', 'width', 'height', 'n_init_fungi']
     integer_param_indices = [problem['names'].index(name) for name in integer_param_names if name in problem['names']]
-
-    # Create a data frame to store the results
-    # data = pd.DataFrame(index=range(n_replicates*len(param_values)), 
-    #                             columns=[param for param in problem['names']] + ['RunId'] + outputs)
+    
     collected_data = []
 
     count = 0
@@ -47,7 +44,6 @@ def run_batches(model, problem, outputs, n_max_timesteps, n_replicates, n_distin
         run_result = batch.batch_run(model, variable_parameters,
                                      iterations=n_replicates, max_steps=n_max_timesteps,
                                      data_collection_period=1)
-        print(run_result)
         
         # Get relevant keys from the run result
         run_keys_relevant = [key for key in run_result[0].keys() if key in outputs or key in ['RunId', 'Step'] or key in problem['names']]
@@ -55,17 +51,12 @@ def run_batches(model, problem, outputs, n_max_timesteps, n_replicates, n_distin
 
         # Store the results in the data frame
         collected_data.extend(run_result_relevant)
-        # for result in run_keys_relevant:
-        #     # data.loc[row_ct, result] = run_result[0][result]
-        #     # row_ct += 1
-        #     collected_data.append(run_result[0][result])
 
-        # clear_output()
+        clear_output()
 
         count += 1
         print(f'{count / len(param_values) * 100:.2f}% done')
     
-    print(collected_data)
     data = pd.DataFrame(collected_data)
 
     data.reset_index(drop=True, inplace=True)
