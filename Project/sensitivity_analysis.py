@@ -3,10 +3,11 @@ from SALib.sample import saltelli
 from SALib.analyze import sobol
 import pandas as pd
 import numpy as np
+import random
 from IPython.display import clear_output
 
 
-def run_batches(model, problem, outputs, n_max_timesteps, n_replicates, n_distinct_samples):
+def run_batches(model, problem, outputs, n_max_timesteps, n_replicates, n_distinct_samples, seed=123):
     """
     Generate parameter samples with SALib and run batches of model replicates.
     Args:
@@ -15,6 +16,7 @@ def run_batches(model, problem, outputs, n_max_timesteps, n_replicates, n_distin
         n_max_timesteps: maximum number of timesteps to run the model for
         n_replicates: number of replicates per sample
         n_distinct_samples: number of distinct samples to generate
+        seed: random seed
     """
 
     # Generate samples
