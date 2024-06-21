@@ -4,6 +4,8 @@ import agent as agt
 
 from mesa.experimental import JupyterViz
 from itertools import combinations
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 
 '''
 Analysis stuff
@@ -111,6 +113,15 @@ def query_simulation_run(data, sim_id, outputs, problem):
     print(f'Parameter values for simulation {sim_id}:')
     print(run_data.iloc[0, :][['SimId'] + problem['names']])
 
+    # Plot Trees/Fungi phase space
+    fig, ax = plt.subplots()
+    fig.set_size_inches(6, 5)
+    ax.plot(run_data['Trees'].values, run_data['Fungi'].values)
+    ax.set_xlabel('Trees')
+    ax.set_ylabel('Fungi')
+    ax.set_title('Trees/Fungi phase space')
+    fig.show()
+
     # Plot the time series data
     for output in outputs:
         fig, ax = plt.subplots()
@@ -120,3 +131,53 @@ def query_simulation_run(data, sim_id, outputs, problem):
         ax.set_xlabel('Timestep')
         ax.set_ylabel(output)
         fig.show()
+
+
+def plot_param_space(data, output):
+    """
+    Plot specific outputs in a sampled 2D parameter space.
+    Args:
+        data (pd.DataFrame): collected data from the model runs
+        output (str): name of the output of interest
+    """
+
+    fig, ax = plt.subplots()
+    fig.set_size_inches(6, 5)
+
+    max_sims = data['SimId'].max() + 1
+
+    harvest_params = []
+    planting_params = []
+    mean_outputs = []
+
+    for sim_id in range(max_sims):
+        data_subset = data[data['SimId'] == sim_id]
+        mean_output = data_subset[output].mean()
+        mean_outputs.append(mean_output)
+        
+        harvest_volume = data_subset['harvest_volume'].values[0]
+        harvest_nbrs = data_subset['harvest_nbrs'].values[0]
+        harvest_prob = data_subset['harvest_prob'].values[0]
+        harvest_param = (1 - harvest_volume / 350) * (1 - harvest_nbrs / 8) * harvest_prob
+        harvest_params.append(harvest_param)
+
+        planting_param = data_subset['top_n_sites_percent'].values[0]
+        planting_params.append(planting_param)
+
+    # Set cmap range
+    vmin = min(mean_outputs)
+    vmax = max(mean_outputs)
+    cmap = plt.cm.get_cmap('viridis')
+
+    ax.scatter(harvest_params, planting_params, c=mean_outputs, cmap=cmap, vmin=vmin, vmax=vmax)
+
+    ax.set_xlabel('Harvest parameter')
+    ax.set_ylabel('Planting parameter')
+    ax.set_title(output)
+
+    # Create a ScalarMappable object with the same colormap and normalization as your scatter points
+    norm = Normalize(vmin=vmin, vmax=vmax)
+    sm = ScalarMappable(norm=norm, cmap=cmap)
+
+    fig.colorbar(sm, ax=ax, label=output)
+    fig.show()
