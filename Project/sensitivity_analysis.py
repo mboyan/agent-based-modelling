@@ -19,6 +19,9 @@ def run_batches(model, problem, outputs, n_max_timesteps, n_replicates, n_distin
         seed: random seed
     """
 
+    np.random.seed(seed)
+    random.seed(seed)
+
     # Generate samples
     param_values = saltelli.sample(problem, n_distinct_samples)
 
