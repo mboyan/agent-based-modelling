@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import numpy as np
 import agent as agt
 
@@ -80,7 +81,7 @@ def plot_index(s, params):
                 params_combo = params
                 indices = s[output]['S' + order]
                 errors = s[output]['S' + order + '_conf']
-                plt.figure()
+                # plt.figure()
 
             l = len(indices)
 
@@ -158,7 +159,7 @@ def plot_param_space(data, output):
         harvest_volume = data_subset['harvest_volume'].values[0]
         harvest_nbrs = data_subset['harvest_nbrs'].values[0]
         harvest_prob = data_subset['harvest_prob'].values[0]
-        harvest_param = (1 - harvest_volume / 350) * (1 - harvest_nbrs / 8) * harvest_prob
+        harvest_param = (1 - harvest_volume / 350) * 100 + (1 - harvest_nbrs / 8) * 10 + harvest_prob
         harvest_params.append(harvest_param)
 
         planting_param = data_subset['top_n_sites_percent'].values[0]
@@ -167,7 +168,7 @@ def plot_param_space(data, output):
     # Set cmap range
     vmin = min(mean_outputs)
     vmax = max(mean_outputs)
-    cmap = plt.cm.get_cmap('viridis')
+    cmap = mpl.colormaps['viridis'] #plt.cm.get_cmap('viridis')
 
     ax.scatter(harvest_params, planting_params, c=mean_outputs, cmap=cmap, vmin=vmin, vmax=vmax)
 
