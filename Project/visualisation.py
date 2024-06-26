@@ -134,51 +134,88 @@ def query_simulation_run(data, sim_id, outputs, problem):
         fig.show()
 
 
-def plot_param_space(data, output):
+def plot_param_space(data, output, param1, param2, mean_over_last=100, ax=None):
     """
     Plot specific outputs in a sampled 2D parameter space.
     Args:
         data (pd.DataFrame): collected data from the model runs
         output (str): name of the output of interest
+        param1 (str): name of the first parameter to plot
+        param2 (str): name of the second parameter to plot
+        mean_over_last (int): number of timesteps to average over for each replicate
+        ax (matplotlib.axes.Axes): axes object to plot on
     """
 
-    fig, ax = plt.subplots()
-    fig.set_size_inches(6, 5)
+    if ax is None:
+        fig, ax = plt.subplots()
+        fig.set_size_inches(6, 5)
+    else:
+        fig = ax.get_figure()
 
     max_sims = data['SimId'].max() + 1
 
-    harvest_params = []
-    planting_params = []
+    # harvest_params = []
+    # planting_params = []
+    param_values_1 = []
+    param_values_2 = []
     mean_outputs = []
 
     for sim_id in range(max_sims):
         data_subset = data[data['SimId'] == sim_id]
-        mean_output = data_subset[output].mean()
+        n_values = data_subset.shape[0]
+        mean_output = data_subset[output].values[n_values - mean_over_last:].mean()
         mean_outputs.append(mean_output)
         
-        harvest_volume = data_subset['harvest_volume'].values[0]
-        harvest_nbrs = data_subset['harvest_nbrs'].values[0]
-        harvest_prob = data_subset['harvest_prob'].values[0]
-        harvest_param = (1 - harvest_volume / 350) * 100 + (1 - harvest_nbrs / 8) * 10 + harvest_prob
-        harvest_params.append(harvest_param)
+        # harvest_volume = data_subset['harvest_volume'].values[0]
+        # harvest_nbrs = data_subset['harvest_nbrs'].values[0]
+        # harvest_prob = data_subset['harvest_prob'].values[0]
+        # harvest_param = (1 - harvest_volume / 350) * 100 + (1 - harvest_nbrs / 8) * 10 + harvest_prob
+        # harvest_params.append(harvest_param)
+        param_values_1_subset = data_subset[param1].values[0]
+        param_values_1.append(param_values_1_subset)
 
-        planting_param = data_subset['top_n_sites_percent'].values[0]
-        planting_params.append(planting_param)
+        # planting_param = data_subset['top_n_sites_percent'].values[0]
+        # planting_params.append(planting_param)
+        param_values_2_subset = data_subset[param2].values[0]
+        param_values_2.append(param_values_2_subset)
 
     # Set cmap range
     vmin = min(mean_outputs)
     vmax = max(mean_outputs)
     cmap = mpl.colormaps['viridis'] #plt.cm.get_cmap('viridis')
 
-    ax.scatter(harvest_params, planting_params, c=mean_outputs, cmap=cmap, vmin=vmin, vmax=vmax)
+    ax.scatter(param_values_1, param_values_2, c=mean_outputs, cmap=cmap, vmin=vmin, vmax=vmax)
 
-    ax.set_xlabel('Harvest parameter')
-    ax.set_ylabel('Planting parameter')
+    ax.set_xlabel(param1)
+    ax.set_ylabel(param2)
     ax.set_title(output)
 
     # Create a ScalarMappable object with the same colormap and normalization as your scatter points
     norm = Normalize(vmin=vmin, vmax=vmax)
     sm = ScalarMappable(norm=norm, cmap=cmap)
 
-    fig.colorbar(sm, ax=ax, label=output)
+    if ax is None:
+        fig.colorbar(sm, ax=ax, label=output)
+        fig.show()
+
+
+def plot_param_space_array(data, params, outputs):
+    """
+    Create a series of 2D plots for each pair of input parameters.
+    Args:
+        data (pd.DataFrame): collected data from the model runs
+        params (list of str): list of parameter names to plot
+        outputs (list of str): list of output variable names to plot
+    """
+
+    param_combos = list(combinations(params, 2))
+
+    fig, ax = plt.subplots(len(outputs), len(param_combos))
+    fig.set_size_inches(2.5*len(param_combos), 2.5*len(outputs))
+
+    for i, output in enumerate(outputs):
+        for j, combo in enumerate(param_combos):
+            plot_param_space(data, output, combo[0], combo[1], ax=ax[i, j])
+    
+    fig.tight_layout()
     fig.show()
