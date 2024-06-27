@@ -154,6 +154,13 @@ def plot_param_space(data, output, param1, param2, mean_over_last=100, ax=None):
 
     max_sims = data['SimId'].max() + 1
 
+    param_name_mapping = {
+        'harvest_volume': '$V_H$',
+        'harvest_nbrs': '$N_H$',
+        'harvest_prob': '$P_H$',
+        'top_n_sites_percent': '$P_\%$'
+    }
+
     # harvest_params = []
     # planting_params = []
     param_values_1 = []
@@ -184,18 +191,18 @@ def plot_param_space(data, output, param1, param2, mean_over_last=100, ax=None):
     vmax = max(mean_outputs)
     cmap = mpl.colormaps['viridis'] #plt.cm.get_cmap('viridis')
 
-    ax.scatter(param_values_1, param_values_2, c=mean_outputs, cmap=cmap, vmin=vmin, vmax=vmax)
+    ax.scatter(param_values_1, param_values_2, c=mean_outputs, cmap=cmap, vmin=vmin, vmax=vmax, marker='.', s=5)
 
-    ax.set_xlabel(param1)
-    ax.set_ylabel(param2)
-    ax.set_title(output)
+    ax.set_xlabel(param_name_mapping[param1])
+    ax.set_ylabel(param_name_mapping[param2])
+    ax.set_title(output, fontsize=11)
 
     # Create a ScalarMappable object with the same colormap and normalization as your scatter points
     norm = Normalize(vmin=vmin, vmax=vmax)
     sm = ScalarMappable(norm=norm, cmap=cmap)
 
+    fig.colorbar(sm, ax=ax)
     if ax is None:
-        fig.colorbar(sm, ax=ax, label=output)
         fig.show()
 
 
@@ -211,7 +218,7 @@ def plot_param_space_array(data, params, outputs):
     param_combos = list(combinations(params, 2))
 
     fig, ax = plt.subplots(len(outputs), len(param_combos))
-    fig.set_size_inches(2.5*len(param_combos), 2.5*len(outputs))
+    fig.set_size_inches(2*len(param_combos), 2*len(outputs))
 
     for i, output in enumerate(outputs):
         for j, combo in enumerate(param_combos):
