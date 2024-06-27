@@ -134,7 +134,7 @@ def query_simulation_run(data, sim_id, outputs, problem):
         fig.show()
 
 
-def plot_param_space(data, output, param1, param2, mean_over_last=100, ax=None):
+def plot_param_space_2D(data, output, param1, param2, mean_over_last=100, ax=None):
     """
     Plot specific outputs in a sampled 2D parameter space.
     Args:
@@ -158,7 +158,8 @@ def plot_param_space(data, output, param1, param2, mean_over_last=100, ax=None):
         'harvest_volume': '$V_H$',
         'harvest_nbrs': '$N_H$',
         'harvest_prob': '$P_H$',
-        'top_n_sites_percent': '$P_\%$'
+        'top_n_sites_percent': '$P_\%$',
+        'fert_comp_ratio_exponent': '$\gamma$'
     }
 
     # harvest_params = []
@@ -206,7 +207,78 @@ def plot_param_space(data, output, param1, param2, mean_over_last=100, ax=None):
         fig.show()
 
 
-def plot_param_space_array(data, params, outputs):
+def plot_param_space_3D(data, output, param1, param2, param3, mean_over_last=100, ax=None):
+    """
+    Plot specific outputs in a sampled 3D parameter space.
+    Args:
+        data (pd.DataFrame): collected data from the model runs
+        output (str): name of the output of interest
+        param1 (str): name of the first parameter to plot
+        param2 (str): name of the second parameter to plot
+        param3 (str): name of the third parameter to plot
+        mean_over_last (int): number of timesteps to average over for each replicate
+        ax (matplotlib.axes.Axes): axes object to plot on
+    """
+
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        fig.set_size_inches(6, 5)
+    else:
+        fig = ax.get_figure()
+
+    max_sims = data['SimId'].max() + 1
+
+    param_name_mapping = {
+        'harvest_volume': '$V_H$',
+        'harvest_nbrs': '$N_H$',
+        'harvest_prob': '$P_H$',
+        'top_n_sites_percent': '$P_\%$',
+        'fert_comp_ratio_exponent': '$\gamma$'
+    }
+
+    param_values_1 = []
+    param_values_2 = []
+    param_values_3 = []
+    mean_outputs = []
+
+    for sim_id in range(max_sims):
+        data_subset = data[data['SimId'] == sim_id]
+        n_values = data_subset.shape[0]
+        mean_output = data_subset[output].values[n_values - mean_over_last:].mean()
+        mean_outputs.append(mean_output)
+
+        param_values_1_subset = data_subset[param1].values[0]
+        param_values_1.append(param_values_1_subset)
+
+        param_values_2_subset = data_subset[param2].values[0]
+        param_values_2.append(param_values_2_subset)
+
+        param_values_3_subset = data_subset[param3].values[0]
+        param_values_3.append(param_values_3_subset)
+
+    # Set cmap range
+    vmin = min(mean_outputs)
+    vmax = max(mean_outputs)
+    cmap = mpl.colormaps['viridis']
+
+    sc = ax.scatter(param_values_1, param_values_2, param_values_3, c=mean_outputs, cmap=cmap, vmin=vmin, vmax=vmax, marker='.', s=5)
+
+    ax.set_xlabel(param_name_mapping[param1])
+    ax.set_ylabel(param_name_mapping[param2])
+    ax.set_zlabel(param_name_mapping[param3])
+    ax.set_title(output, fontsize=11)
+
+    # Create a ScalarMappable object with the same colormap and normalization as your scatter points
+    norm = Normalize(vmin=vmin, vmax=vmax)
+    sm = ScalarMappable(norm=norm, cmap=cmap)
+
+    fig.colorbar(sm, ax=ax, pad=0.25)
+    if ax is None:
+        fig.show()
+
+
+def plot_param_space_array_2D(data, params, outputs):
     """
     Create a series of 2D plots for each pair of input parameters.
     Args:
@@ -218,11 +290,34 @@ def plot_param_space_array(data, params, outputs):
     param_combos = list(combinations(params, 2))
 
     fig, ax = plt.subplots(len(outputs), len(param_combos))
-    fig.set_size_inches(2*len(param_combos), 2*len(outputs))
+    fig.set_size_inches(2.5*len(param_combos), 2*len(outputs))
 
     for i, output in enumerate(outputs):
         for j, combo in enumerate(param_combos):
-            plot_param_space(data, output, combo[0], combo[1], ax=ax[i, j])
+            plot_param_space_2D(data, output, combo[1], combo[0], ax=ax[i, j])
     
     fig.tight_layout()
+    fig.show()
+
+
+def plot_param_space_array_3D(data, params, outputs):
+    """
+    Create a series of 3D plots for each pair of input parameters and output.
+    Args:
+        data (pd.DataFrame): collected data from the model runs
+        params (list of str): list of parameter names to plot
+        outputs (list of str): list of output variable names to plot
+    """
+
+    param_combos = list(combinations(params, 3))
+
+    fig, ax = plt.subplots(len(outputs), len(param_combos), subplot_kw={'projection': '3d'})
+    fig.set_size_inches(3.5*len(param_combos), 3*len(outputs))
+    fig.subplots_adjust(hspace=0.3)
+
+    for i, output in enumerate(outputs):
+        for j, combo in enumerate(param_combos):
+            plot_param_space_3D(data, output, combo[0], combo[1], combo[2], ax=ax[i, j])
+    
+    # fig.tight_layout()
     fig.show()
