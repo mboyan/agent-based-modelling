@@ -52,7 +52,7 @@ class Forest(Model):
 
         # Add initial substrate
         self.grid.add_property_layer(PropertyLayer('substrate', self.width, self.height, 1))
-        self.grid.properties['substrate'].data = np.random.randint(0, max_substrate, (self.width, self.height))
+        self.grid.properties['substrate'].data = np.random.randint(1, max_substrate, (self.width, self.height))
 
         # Add initial soil fertility
         self.grid.add_property_layer(PropertyLayer('soil_fertility', self.width, self.height, 1))
