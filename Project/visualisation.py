@@ -228,35 +228,40 @@ def plot_param_space_array(data, params, outputs):
     fig.show()
 
 
-def plot_param_range(data, param, outputs, param_range, mean_over_last=100):
+def plot_param_range(data, param, output, param_range, mean_over_last=100):
     """
     Create a plot that shows the output for a specific parameter over a range of values.
     Args:
         data (pd.DataFrame): collected data from the model runs
         param (str): name of the parameter to plot
-        outputs (list of str): names of the output of interest
+        outputs (str): name of the output of interest
         param_range (tuple): (min, max) range of values for the parameter
         mean_over_last (int): number of timesteps to average over for each replicate
     """
+
+    param_name_mapping = {
+        'harvest_volume': '$V_H$',
+        'harvest_nbrs': '$N_H$',
+        'harvest_prob': '$P_H$',
+        'top_n_sites_percent': '$P_\%$'
+    }
 
     fig, ax = plt.subplots()
     fig.set_size_inches(4, 3)
     
     data_subset = data[(data[param] >= param_range[0]) & (data[param] <= param_range[1])]
     param_values = data_subset[param].unique()
+    mean_outputs = []
 
-    for output in outputs:
-        mean_outputs = []
+    for param_value in param_values:
+        data_subset_param = data_subset[data_subset[param] == param_value]
+        n_values = data_subset_param.shape[0]
+        mean_output = data_subset_param[output].values[n_values - mean_over_last:].mean()
+        mean_outputs.append(mean_output)
 
-        for param_value in param_values:
-            data_subset_param = data_subset[data_subset[param] == param_value]
-            n_values = data_subset_param.shape[0]
-            mean_output = data_subset_param[output].values[n_values - mean_over_last:].mean()
-            mean_outputs.append(mean_output)
+    ax.scatter(param_values, mean_outputs, marker='o')
 
-        ax.scatter(param_values, mean_outputs, marker='o')
-
-    ax.set_xlabel(param)
+    ax.set_xlabel(param_name_mapping[param])
     ax.set_ylabel(output)
     ax.set_title(f'Average {output} over parameter range', fontsize=11)
     fig.show()
