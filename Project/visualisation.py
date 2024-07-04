@@ -64,6 +64,14 @@ def plot_index(s, params):
         params (list): the parameters taken from s
     """
 
+    param_name_mapping = {
+        'harvest_volume': '$V_H$',
+        'harvest_nbrs': '$N_H$',
+        'harvest_prob': '$P_H$',
+        'top_n_sites_percent': '$P_\%$',
+        'fert_comp_ratio_exponent': '$\gamma$'
+    }
+
     # Order of Si
     orders = ['1', '2', 'T']
     order_names = ['First', 'Second', 'Total']
@@ -77,10 +85,13 @@ def plot_index(s, params):
                 indices = indices[~np.isnan(indices)]
                 errors = s[output]['S' + order + '_conf'].reshape((p ** 2))
                 errors = errors[~np.isnan(errors)]
+                param_labels = ["(" + ", ".join([param_name_mapping[name] for name in combo if name in param_name_mapping.keys()]) + ")"
+                                for combo in params_combo]
             else:
                 params_combo = params
                 indices = s[output]['S' + order]
                 errors = s[output]['S' + order + '_conf']
+                param_labels = [param_name_mapping[name] for name in params_combo if name in param_name_mapping.keys()]
                 # plt.figure()
 
             l = len(indices)
@@ -90,7 +101,8 @@ def plot_index(s, params):
 
             fig.suptitle(f'{output}: {order_names[i]} order sensitivity')
             ax.set_ylim([-0.2, len(indices) - 1 + 0.2])
-            ax.set_yticks(range(l), params_combo)
+            # ax.set_yticks(range(l), params_combo)
+            ax.set_yticks(range(l), param_labels)
             ax.errorbar(indices, range(l), xerr=errors, linestyle='None', marker='o')
             ax.axvline(0, c='k')
 
@@ -134,7 +146,7 @@ def query_simulation_run(data, sim_id, outputs, problem):
         fig.show()
 
 
-def plot_param_space(data, output, param1, param2, mean_over_last=100, ax=None):
+def plot_param_space_2D(data, output, param1, param2, mean_over_last=100, ax=None):
     """
     Plot specific outputs in a sampled 2D parameter space.
     Args:
@@ -152,39 +164,38 @@ def plot_param_space(data, output, param1, param2, mean_over_last=100, ax=None):
     else:
         fig = ax.get_figure()
 
-    max_sims = data['SimId'].max() + 1
+    # max_sims = data['SimId'].max() + 1
 
     param_name_mapping = {
         'harvest_volume': '$V_H$',
         'harvest_nbrs': '$N_H$',
         'harvest_prob': '$P_H$',
-        'top_n_sites_percent': '$P_\%$'
+        'top_n_sites_percent': '$P_\%$',
+        'fert_comp_ratio_exponent': '$\gamma$'
     }
 
-    # harvest_params = []
-    # planting_params = []
-    param_values_1 = []
-    param_values_2 = []
-    mean_outputs = []
+    # param_values_1 = []
+    # param_values_2 = []
+    # mean_outputs = []
 
-    for sim_id in range(max_sims):
-        data_subset = data[data['SimId'] == sim_id]
-        n_values = data_subset.shape[0]
-        mean_output = data_subset[output].values[n_values - mean_over_last:].mean()
-        mean_outputs.append(mean_output)
+    # for sim_id in range(max_sims):
+    #     data_subset = data[data['SimId'] == sim_id]
+    #     n_values = data_subset.shape[0]
+    #     mean_output = data_subset[output].values[n_values - mean_over_last:].mean()
+    #     mean_outputs.append(mean_output)
         
-        # harvest_volume = data_subset['harvest_volume'].values[0]
-        # harvest_nbrs = data_subset['harvest_nbrs'].values[0]
-        # harvest_prob = data_subset['harvest_prob'].values[0]
-        # harvest_param = (1 - harvest_volume / 350) * 100 + (1 - harvest_nbrs / 8) * 10 + harvest_prob
-        # harvest_params.append(harvest_param)
-        param_values_1_subset = data_subset[param1].values[0]
-        param_values_1.append(param_values_1_subset)
+    #     param_values_1_subset = data_subset[param1].values[0]
+    #     param_values_1.append(param_values_1_subset)
 
-        # planting_param = data_subset['top_n_sites_percent'].values[0]
-        # planting_params.append(planting_param)
-        param_values_2_subset = data_subset[param2].values[0]
-        param_values_2.append(param_values_2_subset)
+    #     param_values_2_subset = data_subset[param2].values[0]
+    #     param_values_2.append(param_values_2_subset)
+
+    # Group by 'SimId' and calculate the mean of the last 'mean_over_last' values for 'output'
+    mean_outputs = data.groupby('SimId').apply(lambda x: x[output].iloc[-mean_over_last:].mean()).reset_index(name='mean_output')['mean_output'].tolist()
+
+    # Extract the first value of 'param1', 'param2', and 'param3' for each 'SimId'
+    param_values_1 = data.groupby('SimId').apply(lambda x: x[param1].iloc[0]).tolist()
+    param_values_2 = data.groupby('SimId').apply(lambda x: x[param2].iloc[0]).tolist()
 
     # Set cmap range
     vmin = min(mean_outputs)
@@ -195,6 +206,8 @@ def plot_param_space(data, output, param1, param2, mean_over_last=100, ax=None):
 
     ax.set_xlabel(param_name_mapping[param1])
     ax.set_ylabel(param_name_mapping[param2])
+    if output == "Living Trees Total Volume":
+        output = "Living Trees \n Total Volume"
     ax.set_title(output, fontsize=11)
 
     # Create a ScalarMappable object with the same colormap and normalization as your scatter points
@@ -206,24 +219,131 @@ def plot_param_space(data, output, param1, param2, mean_over_last=100, ax=None):
         fig.show()
 
 
-def plot_param_space_array(data, params, outputs):
+def plot_param_space_3D(data, output, param1, param2, param3, mean_over_last=100, ax=None):
+    """
+    Plot specific outputs in a sampled 3D parameter space.
+    Args:
+        data (pd.DataFrame): collected data from the model runs
+        output (str): name of the output of interest
+        param1 (str): name of the first parameter to plot
+        param2 (str): name of the second parameter to plot
+        param3 (str): name of the third parameter to plot
+        mean_over_last (int): number of timesteps to average over for each replicate
+        ax (matplotlib.axes.Axes): axes object to plot on
+    """
+
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        fig.set_size_inches(6, 5)
+    else:
+        fig = ax.get_figure()
+
+    # max_sims = data['SimId'].max() + 1
+
+    param_name_mapping = {
+        'harvest_volume': '$V_H$',
+        'harvest_nbrs': '$N_H$',
+        'harvest_prob': '$P_H$',
+        'top_n_sites_percent': '$P_\%$',
+        'fert_comp_ratio_exponent': '$\gamma$'
+    }
+
+    # param_values_1 = []
+    # param_values_2 = []
+    # param_values_3 = []
+    # mean_outputs = []
+
+    # for sim_id in range(max_sims):
+    #     data_subset = data[data['SimId'] == sim_id]
+    #     n_values = data_subset.shape[0]
+    #     mean_output = data_subset[output].values[n_values - mean_over_last:].mean()
+    #     mean_outputs.append(mean_output)
+        
+    #     param_values_1_subset = data_subset[param1].values[0]
+    #     param_values_1.append(param_values_1_subset)
+
+    #     param_values_2_subset = data_subset[param2].values[0]
+    #     param_values_2.append(param_values_2_subset)
+
+    #     param_values_3_subset = data_subset[param3].values[0]
+    #     param_values_3.append(param_values_3_subset)
+
+    # Group by 'SimId' and calculate the mean of the last 'mean_over_last' values for 'output'
+    mean_outputs = data.groupby('SimId').apply(lambda x: x[output].iloc[-mean_over_last:].mean()).reset_index(name='mean_output')['mean_output'].tolist()
+
+    # Extract the first value of 'param1', 'param2', and 'param3' for each 'SimId'
+    param_values_1 = data.groupby('SimId').apply(lambda x: x[param1].iloc[0]).tolist()
+    param_values_2 = data.groupby('SimId').apply(lambda x: x[param2].iloc[0]).tolist()
+    param_values_3 = data.groupby('SimId').apply(lambda x: x[param3].iloc[0]).tolist()
+
+    # Set cmap range
+    vmin = min(mean_outputs)
+    vmax = max(mean_outputs)
+    cmap = mpl.colormaps['viridis'] #plt.cm.get_cmap('viridis')
+
+    ax.scatter(param_values_1, param_values_2, param_values_3, c=mean_outputs, cmap=cmap, vmin=vmin, vmax=vmax, marker='.')
+
+    ax.set_xlabel(param_name_mapping[param1])
+    ax.set_ylabel(param_name_mapping[param2])
+    ax.set_zlabel(param_name_mapping[param3])
+    if output == "Living Trees Total Volume":
+        output = "Living Trees \n Total Volume"
+    ax.set_title(output, fontsize=14)
+
+    # Create a ScalarMappable object with the same colormap and normalization as your scatter points
+    norm = Normalize(vmin=vmin, vmax=vmax)
+    sm = ScalarMappable(norm=norm, cmap=cmap)
+
+    fig.colorbar(sm, ax=ax, pad=0.25)
+    if ax is None:
+        fig.show()
+
+
+def plot_param_space_array_2D(data, params, outputs, show_first=None):
     """
     Create a series of 2D plots for each pair of input parameters.
     Args:
         data (pd.DataFrame): collected data from the model runs
         params (list of str): list of parameter names to plot
         outputs (list of str): list of output variable names to plot
+        show_first (int): number of plots to show
     """
 
     param_combos = list(combinations(params, 2))
-
+    
+    if show_first is not None:
+        param_combos = param_combos[:show_first]
     fig, ax = plt.subplots(len(outputs), len(param_combos))
-    fig.set_size_inches(2*len(param_combos), 2*len(outputs))
+    fig.set_size_inches(2.4*len(param_combos), 2*len(outputs))
 
     for i, output in enumerate(outputs):
         for j, combo in enumerate(param_combos):
-            plot_param_space(data, output, combo[0], combo[1], ax=ax[i, j])
+            plot_param_space_2D(data, output, combo[0], combo[1], ax=ax[i, j])
     
+    fig.tight_layout()
+    fig.show()
+
+
+def plot_param_space_array_3D(data, params, outputs):
+    """
+    Create a series of 3D plots for each triplet of input parameters.
+    Args:
+        data (pd.DataFrame): collected data from the model runs
+        params (list of str): list of parameter names to plot
+        outputs (list of str): list of output variable names to plot
+    """
+
+    param_combos = list(combinations(params, 3))
+
+    fig, ax = plt.subplots(len(outputs), len(param_combos), subplot_kw={'projection': '3d'})
+    fig.set_size_inches(3.5*len(param_combos), 2.5*len(outputs))
+    fig.subplots_adjust(wspace=4)
+
+    for i, output in enumerate(outputs):
+        for j, combo in enumerate(param_combos):
+            plot_param_space_3D(data, output, combo[0], combo[1], combo[2], ax=ax[i, j])
+
     fig.tight_layout()
     fig.show()
 
@@ -243,7 +363,8 @@ def plot_param_range(data, param, output, param_range, mean_over_last=100):
         'harvest_volume': '$V_H$',
         'harvest_nbrs': '$N_H$',
         'harvest_prob': '$P_H$',
-        'top_n_sites_percent': '$P_\%$'
+        'top_n_sites_percent': '$P_\%$',
+        'fert_comp_ratio_exponent': '$\gamma$'
     }
 
     fig, ax = plt.subplots()

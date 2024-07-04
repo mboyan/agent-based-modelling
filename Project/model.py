@@ -59,6 +59,9 @@ class Forest(Model):
         self.grid.properties['soil_fertility'].data = np.random.uniform(0, max_soil_fertility,
                                                                         (self.width, self.height))
 
+        # Add lattice tree volume tracker
+        self.grid_volume_tracker = np.zeros((1, self.width, self.height))
+
         self.datacollector = DataCollector(
              {"Trees": lambda m: len(self.getall("Tree")),
               "Fungi": lambda m: len(self.getall("Fungus")),
@@ -152,11 +155,9 @@ class Forest(Model):
 
         # Remove agent from grid
         self.grid.remove_agent(agent)
-        
 
         # Remove agent from schedule
         self.schedule.remove(agent)
-
     
 
     def calc_dist(self, pos1, pos2):
@@ -200,17 +201,17 @@ class Forest(Model):
         competition = vol_nbrs / (vol_self + vol_nbrs)
         return competition
 
-    #def calc_r(self, pos, r0, v_max, grow=True, v_self=1):
     def calc_r(self, pos, v_max, grow=True, v_self=1):
         """
         Methods calculates the r_effective of the position pos
         Args:
             pos (tuple): position of the agent
-            r0 (float): base growth rate
             v_max (float): maximum volume of a tree
+            grow (bool): whether the function is used for tree growth
             v_self (float): volume of the agent
         """
 
+        # Base growth rate
         beta = 0.1
         alpha = self.fert_comp_ratio * beta
 
@@ -220,9 +221,24 @@ class Forest(Model):
 
         r = beta + alpha * F - beta * comp 
         return r
+    
+    def calc_grid_tree_volumes(self):
+        """
+        Compute the tree volume for each lattice site.
+        """
 
+        tree_volumes = np.zeros((self.width, self.height))
+        for tree in self.getall("Tree"):
+            tree_volumes[tuple(tree.pos)] += tree.volume
+
+        return tree_volumes
 
     def getall(self, typeof):
+        """
+        Get all agents of a certain type.
+        Args:
+            typeof (str): type of agent to get
+        """
         if not any([agent.agent_type == typeof for agent in self.schedule.agents]):
             return ([])
         else:
@@ -320,6 +336,7 @@ class Forest(Model):
         self.plant_trees()
         # Save statistics
         self.datacollector.collect(self)
+        self.grid_volume_tracker = np.concatenate((self.grid_volume_tracker, self.calc_grid_tree_volumes()[np.newaxis, :, :]), axis=0)
 
     def run_model(self, n_steps=100):
         """
