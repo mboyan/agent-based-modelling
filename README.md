@@ -3,7 +3,7 @@ _Core course Agent-Based Modelling, MSc Computational Science (UvA/VU, 2024)_
 
 This repository contains the code for the course project assignment in Agent-Based Modelling (ABM). The foundation for our framework is a model proposed by D. C. Thomas, R. Vandegrift and B. A. Roy (2020)[1], investigating the dynamics between viaphytic fungi and trees, which the fungi can use as propagation vectors. We expand this model by creating a mutualist feedback cycle in which both agent types deposit resources, which in turn affect the other agent type's behaviour.
 
-A particular focus of our research is the exploration of forestry techniques consisting of harvesting and planting, which can optimise timber yield while preserving the tree and fungi populations.
+A particular focus of our research is the exploration of forestry techniques consisting of harvesting and planting, which can optimise timber yield while preserving the tree and fungi populations. Inspiration for the implementation of forestry in the ABM was taken from research by Zenith Arnejo et al.(2023)[2].
 
 ## Contents
 
@@ -35,3 +35,4 @@ The packages used in the model include:
 
 ## References
 [1] Thomas, Daniel C., Roo Vandegrift, and Bitty A. Roy. "An agent-based model of the foraging ascomycete hypothesis." Fungal Ecology 47 (2020): 100963.
+[2] Zenith Arnejo et al. “An Agent-Based Model of a Sustainable Forest Operation in a Theoretical Lowland Dipterocarp Forest Modeled after Mount Makiling Forest Reserve, Philippines”. In: Forests 14.2 (2023), 428.
