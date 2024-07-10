@@ -1,5 +1,11 @@
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib as mpl
+import seaborn as sns
+import plotly.graph_objs as go
+import plotly.io as pio
+pio.renderers.default = 'notebook'
+
 import numpy as np
 import agent as agt
 
@@ -161,8 +167,7 @@ def plot_param_space(data, output, param1, param2, mean_over_last=100, ax=None):
         'top_n_sites_percent': '$P_\%$'
     }
 
-    # harvest_params = []
-    # planting_params = []
+
     param_values_1 = []
     param_values_2 = []
     mean_outputs = []
@@ -172,17 +177,10 @@ def plot_param_space(data, output, param1, param2, mean_over_last=100, ax=None):
         n_values = data_subset.shape[0]
         mean_output = data_subset[output].values[n_values - mean_over_last:].mean()
         mean_outputs.append(mean_output)
-        
-        # harvest_volume = data_subset['harvest_volume'].values[0]
-        # harvest_nbrs = data_subset['harvest_nbrs'].values[0]
-        # harvest_prob = data_subset['harvest_prob'].values[0]
-        # harvest_param = (1 - harvest_volume / 350) * 100 + (1 - harvest_nbrs / 8) * 10 + harvest_prob
-        # harvest_params.append(harvest_param)
+
         param_values_1_subset = data_subset[param1].values[0]
         param_values_1.append(param_values_1_subset)
 
-        # planting_param = data_subset['top_n_sites_percent'].values[0]
-        # planting_params.append(planting_param)
         param_values_2_subset = data_subset[param2].values[0]
         param_values_2.append(param_values_2_subset)
 
@@ -265,3 +263,69 @@ def plot_param_range(data, param, output, param_range, mean_over_last=100):
     ax.set_ylabel(output)
     ax.set_title(f'Average {output} over parameter range', fontsize=11)
     fig.show()
+    
+    
+def phase_space_2d(data, output_var='Trees', input_var='harvest_nbrs', input_value=None, start_step=50):
+
+    if not input_value:
+        input_value = sorted(data[input_var].unique())[0]
+
+    subset = data[data[input_var] == input_value]
+    subset = subset.sort_values(by=['Step', 'RunId'])
+
+    # Compute mean and derivative over the 20 runs for each time step
+    mean_output = subset.groupby('Step')[output_var].mean().values
+    derivative_output = np.gradient(mean_output)
+
+    # Consider only the data from the specified start step onwards
+    mean_output = mean_output[start_step:]
+    derivative_output = derivative_output[start_step:]
+
+    # Plotting
+    plt.figure(figsize=(10, 6))
+    plt.plot(mean_output, derivative_output, label=f'Derivative vs {output_var}', color='blue')
+    plt.xlabel(output_var)
+    plt.ylabel(f'Derivative of {output_var}')
+    plt.title(f'{output_var} vs Derivative for {input_var} = {input_value}')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+def phase_space_3d(data, output_var='Trees', input_var='harvest_nbrs', start_step=50):
+    # Initialize lists to store the results
+    input_var_values = sorted(data[input_var].unique())
+    output_means = []
+    output_derivatives = []
+
+    # Process each unique value of the input variable
+    for input_value in input_var_values:
+        subset = data[data[input_var] == input_value]
+        # Ensure the data is sorted by Step and RunId
+        subset = subset.sort_values(by=['Step', 'RunId'])
+        # Compute mean output variable over the 20 runs for each time step
+        mean_output = subset.groupby('Step')[output_var].mean().values
+        # Compute the derivative of the mean output variable
+        derivative_output = np.gradient(mean_output)
+        # Store the results starting from the specified start step
+        output_means.append(mean_output[start_step:])
+        output_derivatives.append(derivative_output[start_step:])
+
+    # Convert lists to arrays for plotting
+    output_means = np.array(output_means)
+    output_derivatives = np.array(output_derivatives)
+
+    # Create 3D plot
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Plotting
+    for i, input_value in enumerate(input_var_values):
+        ax.plot(input_value * np.ones_like(output_means[i]), output_means[i], output_derivatives[i], lw=0.5)
+
+    # Labels
+    ax.set_xlabel(input_var)
+    ax.set_ylabel(output_var)
+    ax.set_zlabel(f'Derivative')
+
+    plt.title(f'Phase space of Fungi Population for varying $V_H$')
+    plt.show()

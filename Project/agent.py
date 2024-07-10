@@ -11,9 +11,27 @@ def check_non_empty(cell_value):
         """
         return cell_value > 0
 
+
 class Organism(Agent):
     """
-    General class for all organisms in the model.
+    General class for all organisms in the forest model.
+    
+    Attributes
+    ---------------------------------------------------
+    unique_id : int
+        Unique id for agent.
+    model : Model
+        Forest model agent is placed in.
+    pos : tuple
+        Position of agent on forest grid.
+    disp : int
+        Dispersal coefficient of agent.
+        
+    Methods
+    ---------------------------------------------------
+    calc_dist()
+        Calculates the distance between two positions 
+        on forest grid.
     """
 
     def __init__(self, unique_id, model, pos, disp):
@@ -25,7 +43,7 @@ class Organism(Agent):
 
     def calc_dist(self, pos1, pos2):
         """
-        Calculate the distance between two positions.
+        Calculate the distance between two positions on forest grid.
         """
         x1, y1 = pos1
         x2, y2 = pos2
@@ -35,7 +53,42 @@ class Organism(Agent):
 
 class Tree(Organism):
     """
-    A tree agent.
+    Represents an individual tree agent in the forest.
+    
+    Attributes
+    ---------------------------------------------------
+    unique_id : int
+        Unique id for agent.
+    model : Model
+        Forest model tree agent is placed in.
+    pos : tuple
+        Position of tree on forest grid.
+    disp : int
+        Dispersal coefficient for leaf fall.
+    init_volume : float
+        Volume a tree is initialized with.
+        
+    Methods
+    ---------------------------------------------------
+    grow ()
+        Calculates tree growth based on current volume
+        and environmental factors.
+    shed_leaves()
+        Called in autumn if a tree is infected.
+        Drops leaves on grid cells and attempts to 
+        infect woody substrate on forest floor.
+    harvest()
+        Remove tree agent if all three harvest 
+        thresholds are satisfied:
+        - volume
+        - number of neighbors
+        - undefined probability
+    stochastic_removal()
+        Stochastically remove tree agents based
+        on their average lifespan (120 years).
+    step()
+
+
     """
 
     def __init__(self, unique_id, model, pos, disp, init_volume=1):
@@ -53,7 +106,7 @@ class Tree(Organism):
 
     def grow(self):
         """
-        Grow the tree.
+        Calculates tree growth based on current volume and environmental factors.
         """
 
         v_current = self.volume
@@ -64,10 +117,11 @@ class Tree(Organism):
 
     def shed_leaves(self):
         """
-        Shed leaves.
-        TODO
-        - don't scan entire lattice
+        Called in autumn if a tree is infected.
+        Drops leaves on grid cells and attempts to 
+        infect woody substrate on forest floor.
         """
+        # check for substrate
         substrate_cells = self.model.grid.properties['substrate'].select_cells(check_non_empty)
 
         for cell in substrate_cells:
@@ -76,25 +130,14 @@ class Tree(Organism):
             # Inoculate substrate
             if np.random.random() < np.exp(-dist / self.dispersal_coeff):
                 self.model.new_agent(Fungus, cell)
-        # Scan all substrate on lattice
-        # for x in range(self.model.width):
-        #     for y in range(self.model.height):
-        #         if self.model.grid.properties['substrate'].data[x, y] > 0:
 
-        #             dist = self.calc_dist((x, y), self.pos)
-
-        #             # Inoculate substrate
-        #             if np.random.random() < np.exp(-dist / self.dispersal_coeff):
-        #                 self.model.new_agent(Fungus, (x, y))
 
     def harvest(self):
         """
-        A tree 'harvests itself' if:
-        If the volume is above a threshold and if x percent of the surrounding 8 trees are still present
-            -> can be harvested with probability p
-            
-        TODO
-        - finish up + remove returns
+        Remove tree agent if all three harvest thresholds are satisfied:
+        - volume
+        - number of neighbors
+        - undefined probability
         """
         harvest_vol_threshold, harvest_nbrs_threshold, harvest_probability = self.model.harvest_params
 
@@ -106,15 +149,14 @@ class Tree(Organism):
             count_trees = sum(agent.agent_type == "Tree" for agent in neighbouring_agents)
 
             if count_trees >= harvest_nbrs_threshold:
-                # Include a random probability
+                # Include an udefined environmental probability
                 if random.random() < harvest_probability:
                     self.model.harvest_volume += self.volume
                     self.model.remove_agent(self)  # Remove the tree
-                    return True
-        return False  # Tree is not harvested
 
     def stochastic_removal(self):
-        ''' Stochastic removal of trees: assuming they live on average of 120 years (= 4 * 120 = 480 timesteps)
+        ''' 
+        Stochastically remove tree agents based on their average lifespan (120 years).
         '''
 
         rate_parameter = 1 / 480
@@ -232,7 +274,7 @@ class Fungus(Organism):
 
     def die(self):
         """
-        Die if no energy or killed through environment
+        Die if no energy or killed through environment.
         """
         self.model.remove_agent(self)
 
