@@ -35,4 +35,4 @@ The packages used in the model include:
 
 ## References
 [1] Thomas, Daniel C., Roo Vandegrift, and Bitty A. Roy. "An agent-based model of the foraging ascomycete hypothesis." Fungal Ecology 47 (2020): 100963.\
-[2] Zenith Arnejo et al. “An Agent-Based Model of a Sustainable Forest Operation in a Theoretical Lowland Dipterocarp Forest Modeled after Mount Makiling Forest Reserve, Philippines”. In: Forests 14.2 (2023), 428.
+[2] Zenith Arnejo et al. “An Agent-Based Model of a Sustainable Forest Operation in a Theoretical Lowland Dipterocarp Forest Modeled after Mount Makiling Forest Reserve, Philippines”. In: Forests 14.2 (2023): 428.
