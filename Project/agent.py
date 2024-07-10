@@ -20,11 +20,13 @@ def check_non_empty(cell_value):
         return cell_value > 0
 
 
+
+
 class Organism(Agent):
     """
     General class for all organisms in the forest model.
     
-    Attributes
+    Args
     ---------------------------------------------------
     unique_id : int
         Unique id for agent.
@@ -59,11 +61,13 @@ class Organism(Agent):
         return np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
 
+
+
 class Tree(Organism):
     """
     Represents an individual tree agent in the forest.
     
-    Attributes
+    Args
     ---------------------------------------------------
     unique_id : int
         Unique id for agent.
@@ -75,7 +79,20 @@ class Tree(Organism):
         Dispersal coefficient for leaf fall.
     init_volume : float
         Volume a tree is initialized with.
-        
+    
+    Additional attributes
+    ---------------------------------------------------
+    agent_type : float
+        Name of agent type.
+    volume : float
+        Current tree volume.
+    infected : Bool
+        Infection status of tree.
+    v_max : int
+        Maximum volune the agent can reach.
+    leaffall: int   
+        Frequency of leaffall in simulation steps
+    
     Methods
     ---------------------------------------------------
     grow ()
@@ -112,6 +129,7 @@ class Tree(Organism):
         # Mark tree site in forest model
         self.model.tree_sites[tuple(self.pos)] = True
 
+
     def grow(self):
         """
         Calculates tree growth based on current volume and environmental factors.
@@ -122,6 +140,7 @@ class Tree(Organism):
         v_update = v_current * np.exp(r*(1-v_current/self.v_max)**4)
 
         self.volume = v_update
+
 
     def shed_leaves(self):
         """
@@ -163,6 +182,7 @@ class Tree(Organism):
                     self.model.harvest_volume += self.volume
                     self.model.remove_agent(self) 
 
+
     def stochastic_removal(self):
         ''' 
         Stochastically remove tree agents based on their average lifespan (120 years).
@@ -197,11 +217,13 @@ class Tree(Organism):
         self.stochastic_removal()
 
 
+
+
 class Fungus(Organism):
     """
     Represents an individual fungus agent in the forest.
     
-    Attributes
+    Args
     ---------------------------------------------------
     unique_id : int
         Unique id for agent.
@@ -213,6 +235,13 @@ class Fungus(Organism):
         Dispersal coefficient for sporulation on forest floor.
     init_energy : int
         Energy a fungus agent is initialized with.
+        
+    Additional attributes
+    ---------------------------------------------------
+    agent_type : string
+        Name of agent type.
+    energy : int
+        Energy storage of fungus.
         
     Methods
     ---------------------------------------------------
@@ -244,6 +273,7 @@ class Fungus(Organism):
         self.agent_type = 'Fungus'
         self.energy = init_energy
 
+
     def consume(self):
         """
         Consumes substrate and deposit fertility on lattice cell the fungus occupies.
@@ -261,6 +291,7 @@ class Fungus(Organism):
         # Consume reserve if no wood present
         else:
             self.energy -= 1
+
 
     def infect_wood(self, cell):
         '''
@@ -284,6 +315,7 @@ class Fungus(Organism):
         if np.random.random() < prob:
             self.model.new_agent(Fungus, cell)
 
+
     def infect_tree(self, tree):
         '''
         Attempt to infect tree based on dispersal coefficient.
@@ -299,6 +331,7 @@ class Fungus(Organism):
         # Probabilistic infection
         if np.random.random() < prob:
             tree.infected = True
+
 
     def sporulate(self):
         """
@@ -326,6 +359,7 @@ class Fungus(Organism):
             if not tree.infected:
                 self.infect_tree(tree)
 
+
     def die(self):
         """
         Remove fungus agent from forest.
@@ -339,6 +373,7 @@ class Fungus(Organism):
         '''
         if np.random.random() < 0.1:
            self.model.remove_agent(self)
+
 
     def step(self):
         """
